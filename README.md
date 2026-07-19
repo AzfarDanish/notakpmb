@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NotaKPMB
+
+An academic archive for browsing and reading study materials — notes, exercises, and past exams — organized by semester and subject.
+
+## Features
+
+- **Semester-based browsing** — Content grouped into semesters
+- **Subject-organized documents** — Subjects listed under each semester with typed notes, exercises, and exams
+- **Breadcrumb navigation** — Deep-link into any document in the archive hierarchy
+- **Prev / Next document navigation** — Sequentially browse documents within a subject
+- **Responsive design** — Two-column grid on desktop, single column on mobile
+- **Contribute section** — Call-to-action for submitting study materials
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org/) 16 — React framework
+- [React](https://react.dev/) 19
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/) v4 — styling
+- [Playfair Display](https://fonts.google.com/specimen/Playfair+Display) + [Inter](https://fonts.google.com/specimen/Inter) — typography via `next/font`
 
 ## Getting Started
 
-First, run the development server:
+**Prerequisites:** Node.js, pnpm
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the archive.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+├── page.tsx                    # Home — lists semesters
+├── semester/
+│   └── [id]/
+│       ├── page.tsx            # Semester page — lists subjects
+│       └── [subject]/
+│           ├── page.tsx        # Subject page — lists documents
+│           └── [doc]/
+│               └── page.tsx    # Document reader
+components/
+└── ui/                         # Reusable UI components
+public/                         # Static assets
+```
 
-## Learn More
+## Contributing
 
-To learn more about Next.js, take a look at the following resources:
+Contributions of study materials are welcome. This project is in early development — check back for upload functionality.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[MIT](LICENSE)
