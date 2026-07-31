@@ -1,90 +1,39 @@
-import Link from 'next/link'
+import Link from 'next/link';
+import { semesters, semesterSubjects } from '@/lib/data';
+import { notFound } from 'next/navigation';
 
-type Subject = {
-  title: string
-  meta: string
-}
+export default async function SemesterPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const semester = semesters[id as keyof typeof semesters];
+  const subjects = semesterSubjects[id as keyof typeof semesterSubjects];
 
-const semesterData: Record<string, { title: string; subjects: Subject[] }> = {
-  sem1: {
-    title: 'Semester 1',
-    subjects: [
-      { title: 'Programming Fundamentals', meta: 'Notes, Labs' },
-      { title: 'Discrete Mathematics', meta: 'Exercises, Exams' },
-      { title: 'Computer Systems', meta: 'Notes' },
-    ],
-  },
-  sem2: {
-    title: 'Semester 2',
-    subjects: [
-      { title: 'Data Structures', meta: 'Notes, Labs' },
-      { title: 'Database Systems', meta: 'Projects, Exams' },
-      { title: 'Web Development', meta: 'Exercises' },
-    ],
-  },
-  sem3: {
-    title: 'Semester 3',
-    subjects: [
-      { title: 'Operating Systems', meta: 'Notes, Exams' },
-      { title: 'Computer Networks', meta: 'Labs' },
-      { title: 'Software Engineering', meta: 'Projects' },
-    ],
-  },
-}
-
-export default function SemesterPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const semester = semesterData[params.id]
-
-  if (!semester) {
-    return (
-      <main className="min-h-screen px-10 md:px-20 py-16">
-        <p className="text-sm text-secondary">Semester not found.</p>
-      </main>
-    )
+  if (!semester || !subjects) {
+    notFound();
   }
-
+  
   return (
-    <main className="min-h-screen px-10 md:px-20 py-16">
-      {/* Top */}
-      <div className="mb-16">
-        <a
-          href="/"
-          className="text-xs tracking-wide text-secondary uppercase"
-        >
-          ← Index
-        </a>
-
-        <h1 className="mt-6 font-serif italic text-6xl md:text-7xl tracking-tight">
+    <main className="max-w-7xl mx-auto px-6 py-12 md:py-24 md:px-12">
+      <div className="mb-16 md:mb-40">
+        <Link href="/" className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase hover:text-neutral-900 transition-colors flex items-center gap-2 mb-8 md:mb-12 w-fit">
+          <span>&larr;</span> INDEX
+        </Link>
+        <h1 className="font-serif text-5xl md:text-9xl italic tracking-tight">
           {semester.title}
         </h1>
       </div>
-
-      {/* Subjects */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-y-16 gap-x-12">
-  {semester.subjects.map((subject, i) => {
-    const slug = subject.title.toLowerCase().replace(/\s+/g, '-')
-
-    return (
-      <Link
-        key={i}
-        href={`/semester/${params.id}/${slug}`}
-        className="group"
-      >
-        <h2 className="font-serif text-2xl md:text-3xl tracking-tight group-hover:opacity-60 transition">
-          {subject.title}
-        </h2>
-
-        <p className="mt-2 text-xs text-secondary tracking-wide">
-          {subject.meta}
-        </p>
-      </Link>
-    )
-  })}
-</div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-12 md:gap-y-32">
+        {subjects.map((subject) => (
+          <Link key={subject.id} href={`/subject/${subject.id}`} className="group block">
+            <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-2">
+              {subject.code}
+            </p>
+            <h2 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
+              {subject.title}
+            </h2>
+          </Link>
+        ))}
+      </div>
     </main>
-  )
+  );
 }
