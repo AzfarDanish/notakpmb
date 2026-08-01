@@ -23,10 +23,17 @@ type IntakeExclusion = {
   intake: string
 }
 
+type SubjectRename = {
+  subjectId: string
+  title: string
+  code?: string
+}
+
 type Manifest = {
   subjects: ManagedSubject[]
   deletedSubjectIds: string[]
   intakeExclusions: IntakeExclusion[]
+  subjectRenames: SubjectRename[]
 }
 
 const MANIFEST_KEY = '_subjects.json'
@@ -35,6 +42,7 @@ const EMPTY_MANIFEST: Manifest = {
   subjects: [],
   deletedSubjectIds: [],
   intakeExclusions: [],
+  subjectRenames: [],
 }
 
 async function readManifest(): Promise<Manifest> {
@@ -56,6 +64,9 @@ async function readManifest(): Promise<Manifest> {
         : [],
       intakeExclusions: Array.isArray(parsed.intakeExclusions)
         ? parsed.intakeExclusions
+        : [],
+      subjectRenames: Array.isArray(parsed.subjectRenames)
+        ? parsed.subjectRenames
         : [],
     };
   } catch (e) {
@@ -90,6 +101,16 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+function applyRename<T extends Subject>(subject: T, renames: SubjectRename[]): T {
+  const rename = renames.find((r) => r.subjectId === subject.id);
+  if (!rename) return subject;
+  return {
+    ...subject,
+    title: rename.title,
+    code: rename.code ?? subject.code,
+  };
+}
+
 export async function getCustomSubjects(): Promise<ManagedSubject[]> {
   const manifest = await readManifest();
   return manifest.subjects;
@@ -111,9 +132,9 @@ export async function getSubjectsForProgramme(
       .map((e) => e.subjectId),
   );
 
-  const staticSubjects = programme.subjects.filter(
-    (s) => !deleted.has(s.id) && !(intake && excludedForIntake.has(s.id)),
-  );
+  const staticSubjects = programme.subjects
+    .filter((s) => !deleted.has(s.id) && !(intake && excludedForIntake.has(s.id)))
+    .map((s) => applyRename(s, manifest.subjectRenames));
 
   const customSubjects = manifest.subjects
     .filter((s) => s.programmeId === programmeId)
@@ -157,7 +178,10 @@ export async function getSubjectWithCustom(
 
   if (staticContext) {
     if (manifest.deletedSubjectIds.includes(id)) return undefined;
-    return staticContext;
+    return {
+      subject: applyRename(staticContext.subject, manifest.subjectRenames),
+      programme: staticContext.programme,
+    };
   }
 
   const managed = manifest.subjects.find((s) => s.id === id);
@@ -198,6 +222,43 @@ export async function addSubject(input: {
   manifest.subjects.push(subject);
   await writeManifest(manifest);
   return subject;
+}
+
+export async function renameSubject(input: {
+  id: string
+  title: string
+  code?: string
+}): Promise<Subject> {
+  const title = input.title.trim();
+  if (!title) throw new Error('Subject title is required');
+
+  const manifest = await readManifest();
+  const custom = manifest.subjects.find((s) => s.id === input.id);
+  if (custom) {
+    custom.title = title;
+    const code = input.code?.trim();
+    if (code !== undefined) custom.code = code;
+    await writeManifest(manifest);
+    return { id: custom.id, title: custom.title, code: custom.code };
+  }
+
+  const staticContext = getSubject(input.id);
+  if (!staticContext) throw new Error('Subject not found');
+
+  const code = input.code?.trim();
+  const existing = manifest.subjectRenames.find((r) => r.subjectId === input.id);
+  if (existing) {
+    existing.title = title;
+    if (code !== undefined) existing.code = code;
+  } else {
+    manifest.subjectRenames.push({
+      subjectId: input.id,
+      title,
+      ...(code !== undefined ? { code } : {}),
+    });
+  }
+  await writeManifest(manifest);
+  return { id: input.id, title, code: code ?? staticContext.subject.code };
 }
 
 export async function deleteSubject(id: string): Promise<{ deletedFiles: number }> {
@@ -247,7 +308,9 @@ export async function searchArchiveWithCustom(query: string): Promise<{
   const manifest = await readManifest();
 
   const deleted = new Set(manifest.deletedSubjectIds);
-  results.subjects = results.subjects.filter(({ subject }) => !deleted.has(subject.id));
+  results.subjects = results.subjects
+    .filter(({ subject }) => !deleted.has(subject.id))
+    .map((ctx) => ({ ...ctx, subject: applyRename(ctx.subject, manifest.subjectRenames) }));
 
   const q = query.trim().toLowerCase();
   for (const managed of manifest.subjects) {

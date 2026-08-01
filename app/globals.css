@@ -8,6 +8,93 @@
   --font-serif: var(--font-sans);
 }
 
+.code-viewer {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #1A1A1A;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.docx-content {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: #1A1A1A;
+}
+
+.docx-content h1,
+.docx-content h2,
+.docx-content h3,
+.docx-content h4,
+.docx-content h5,
+.docx-content h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 1.5em 0 0.5em;
+}
+
+.docx-content h1 { font-size: 1.75rem; }
+.docx-content h2 { font-size: 1.5rem; }
+.docx-content h3 { font-size: 1.25rem; }
+.docx-content h4 { font-size: 1.125rem; }
+
+.docx-content p {
+  margin: 0 0 1em;
+}
+
+.docx-content ul,
+.docx-content ol {
+  margin: 0 0 1em;
+  padding-left: 1.5em;
+}
+
+.docx-content ul { list-style: disc; }
+.docx-content ol { list-style: decimal; }
+
+.docx-content li {
+  margin-bottom: 0.25em;
+}
+
+.docx-content strong { font-weight: 700; }
+.docx-content em { font-style: italic; }
+
+.docx-content blockquote {
+  border-left: 2px solid #D4D4D4;
+  padding-left: 1em;
+  margin: 0 0 1em;
+  color: #737373;
+}
+
+.docx-content a {
+  color: #A32A2A;
+  text-decoration: underline;
+}
+
+.docx-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.docx-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em;
+  font-size: 0.875rem;
+}
+
+.docx-content th,
+.docx-content td {
+  border: 1px solid #E5E5E5;
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.docx-content th {
+  font-weight: 700;
+}
+
 @layer base {
   button {
     cursor: pointer;

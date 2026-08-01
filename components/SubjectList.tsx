@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
 import type { Subject } from '@/lib/data';
@@ -25,6 +25,7 @@ export function SubjectList({
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+  const [renameSubject, setRenameSubject] = useState<Subject | null>(null);
   const [selectedIntake, setSelectedIntake] = useState('ALL');
 
   const visibleSubjects = subjects.filter(
@@ -77,45 +78,71 @@ export function SubjectList({
       )}
 
       {visibleSubjects.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-12 md:gap-y-24">
-          {visibleSubjects.map((subject) => (
-            <div key={subject.id} className="group flex flex-col gap-2 relative">
-              <Link href={`/subject/${subject.id}`} className="flex flex-col gap-2 pr-8">
-                <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
-                  {subject.code}
-                </p>
-                <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
-                  {subject.title}
-                </h3>
-                {subject.intake && (
-                  <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium mt-1">
-                    Intake {subject.intake}
-                  </p>
-                )}
-              </Link>
-              {canManage && (
-                <div className="absolute top-0 right-0">
-                  <MoreMenu
-                    label={`Actions for ${subject.title}`}
-                    items={[
-                      {
-                        key: 'delete',
-                        label: 'Delete Subject',
-                        danger: true,
-                        icon: <Trash2 size={16} strokeWidth={1.5} />,
-                        onClick: () => setDeleteSubject(subject),
-                      },
-                    ]}
-                  />
+        <div className="flex flex-col">
+          {Array.from(
+            { length: Math.ceil(visibleSubjects.length / 3) },
+            (_, rowIndex) => {
+              const row = visibleSubjects.slice(rowIndex * 3, rowIndex * 3 + 3);
+              return (
+                <div
+                  key={rowIndex}
+                  className="flex flex-col md:flex-row md:items-stretch gap-12 md:gap-x-12 border-b border-neutral-200"
+                >
+                  {row.map((subject, cardIndex) => (
+                    <div
+                      key={subject.id}
+                      className={`group flex flex-col gap-2 relative md:flex-1 md:min-w-0 ${
+                        rowIndex > 0 ? 'pt-6 md:pt-12' : ''
+                      } pb-6 md:pb-12 ${
+                        cardIndex < row.length - 1 ? 'md:border-r md:border-neutral-200' : ''
+                      }`}
+                    >
+                      <Link href={`/subject/${subject.id}`} className="flex flex-col gap-2 pr-8">
+                        <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
+                          {subject.code}
+                        </p>
+                        <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
+                          {subject.title}
+                        </h3>
+                        {subject.intake && (
+                          <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium mt-1">
+                            Intake {subject.intake}
+                          </p>
+                        )}
+                      </Link>
+                      {canManage && (
+                        <div className="absolute top-0 right-0">
+                          <MoreMenu
+                            label={`Actions for ${subject.title}`}
+                            items={[
+                              {
+                                key: 'rename',
+                                label: 'Rename Subject',
+                                icon: <Pencil size={16} strokeWidth={1.5} />,
+                                onClick: () => setRenameSubject(subject),
+                              },
+                              {
+                                key: 'delete',
+                                label: 'Delete Subject',
+                                danger: true,
+                                icon: <Trash2 size={16} strokeWidth={1.5} />,
+                                onClick: () => setDeleteSubject(subject),
+                              },
+                            ]}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          ))}
+              );
+            },
+          )}
         </div>
       )}
 
       {canManage && (
-        <div className="mt-12 md:mt-16">
+        <div className="mt-8 md:mt-12">
           <button
             onClick={() => setAddOpen(true)}
             className="group flex items-center gap-4 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
@@ -148,6 +175,19 @@ export function SubjectList({
             onClose={() => setDeleteSubject(null)}
             onDeleted={() => {
               setDeleteSubject(null);
+              router.refresh();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {renameSubject && (
+          <RenameSubjectModal
+            subject={renameSubject}
+            onClose={() => setRenameSubject(null)}
+            onRenamed={() => {
+              setRenameSubject(null);
               router.refresh();
             }}
           />
@@ -422,6 +462,128 @@ function DeleteSubjectModal({
           )}
         </button>
       </div>
+    </ModalCard>
+  );
+}
+
+function RenameSubjectModal({
+  subject,
+  onClose,
+  onRenamed,
+}: {
+  subject: Subject
+  onClose: () => void
+  onRenamed: () => void
+}) {
+  const [title, setTitle] = useState(subject.title);
+  const [code, setCode] = useState(subject.code);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!title.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/subjects?id=${encodeURIComponent(subject.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          code: code.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error || 'Failed to rename subject');
+        return;
+      }
+      onRenamed();
+    } catch (err) {
+      console.error('Rename subject error:', err);
+      setError('Failed to rename subject');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ModalCard onClose={onClose} disableClose={isSubmitting}>
+      <div className="flex items-start justify-between mb-6">
+        <h3 className="font-serif text-2xl font-bold text-neutral-900">
+          Rename Subject
+        </h3>
+        <button
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+          aria-label="Close"
+        >
+          <X size={20} strokeWidth={1.5} />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label
+            htmlFor="rename-subject-title"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+          >
+            Subject title
+          </label>
+          <input
+            id="rename-subject-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={subject.title}
+            autoFocus
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="rename-subject-code"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+          >
+            Course code <span className="normal-case text-neutral-400">(optional)</span>
+          </label>
+          <input
+            id="rename-subject-code"
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder={subject.code}
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <div className="flex items-center justify-end gap-4 mt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            CANCEL
+          </button>
+          <button
+            type="submit"
+            disabled={!title.trim() || isSubmitting}
+            className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+          >
+            {isSubmitting ? (
+              <><Loader2 size={14} className="animate-spin" /> RENAMING...</>
+            ) : (
+              'RENAME SUBJECT'
+            )}
+          </button>
+        </div>
+      </form>
     </ModalCard>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isR2Configured } from '@/lib/r2';
-import { addSubject, deleteSubject } from '@/lib/subjects';
+import { addSubject, deleteSubject, renameSubject } from '@/lib/subjects';
 
 export async function POST(request: NextRequest) {
   if (!isR2Configured()) {
@@ -46,6 +46,50 @@ export async function POST(request: NextRequest) {
     }
     console.error('Add subject error:', e);
     return NextResponse.json({ error: 'Failed to add subject' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!isR2Configured()) {
+    return NextResponse.json({ error: 'R2 not configured' }, { status: 503 });
+  }
+
+  const id = request.nextUrl.searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const { title, code } = (body ?? {}) as Record<string, unknown>;
+  if (typeof title !== 'string') {
+    return NextResponse.json({ error: 'title is required' }, { status: 400 });
+  }
+  if (code !== undefined && typeof code !== 'string') {
+    return NextResponse.json({ error: 'code must be a string' }, { status: 400 });
+  }
+
+  try {
+    const subject = await renameSubject({
+      id,
+      title,
+      code: typeof code === 'string' ? code : undefined,
+    });
+    return NextResponse.json({ subject });
+  } catch (e) {
+    if (e instanceof Error && e.message === 'Subject title is required') {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+    if (e instanceof Error && e.message === 'Subject not found') {
+      return NextResponse.json({ error: e.message }, { status: 404 });
+    }
+    console.error('Rename subject error:', e);
+    return NextResponse.json({ error: 'Failed to rename subject' }, { status: 500 });
   }
 }
 

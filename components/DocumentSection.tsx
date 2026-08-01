@@ -5,11 +5,16 @@ import { X, Trash2, Loader2, Eye, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { MoreMenu } from '@/components/MoreMenu';
+import { DocxPreview } from '@/components/DocxPreview';
+import { CodeViewer } from '@/components/CodeViewer';
+import { SpreadsheetViewer } from '@/components/SpreadsheetViewer';
+import { ImageViewer } from '@/components/ImageViewer';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { getFileKind, type FileKind } from '@/lib/fileKinds';
 import type { R2Document } from '@/lib/r2';
 
 export function DocumentSection({ title, items, scrollable = false }: { title: string, items: R2Document[], scrollable?: boolean }) {
-  const [previewItem, setPreviewItem] = useState<{url: string, title: string, downloadUrl: string} | null>(null);
+  const [previewItem, setPreviewItem] = useState<{url: string, title: string, downloadUrl: string, kind: FileKind} | null>(null);
   const [deleteItem, setDeleteItem] = useState<{key: string, title: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
@@ -63,6 +68,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
                 title: item.title,
                 downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
+                kind: getFileKind(item.originalName || item.title),
               })}
               className="flex-1 text-left cursor-pointer"
             >
@@ -92,6 +98,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                           url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
                           title: item.title,
                           downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
+                          kind: getFileKind(item.originalName || item.title),
                         }),
                     },
                     {
@@ -159,17 +166,31 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white rounded-sm border border-neutral-200 overflow-hidden relative shadow-inner flex items-center justify-center">
-                  <iframe 
-                    src={previewItem.url} 
-                    className="w-full h-full border-none absolute inset-0"
-                    title="Document Preview"
-                  />
-                  <div className="text-center p-8 text-neutral-500 pointer-events-none z-0">
-                    <p className="mb-2">If the preview doesn&apos;t load automatically,</p>
-                    <p>this file type might not be supported by your browser.</p>
-                    <p className="mt-4 text-xs">Please use the download button instead.</p>
-                  </div>
+                <div className={`flex-1 bg-white rounded-sm border border-neutral-200 overflow-hidden relative shadow-inner ${previewItem.kind === 'native' ? 'flex items-center justify-center' : 'flex flex-col'}`}>
+                  {previewItem.kind === 'docx' && (
+                    <DocxPreview url={previewItem.url} title={previewItem.title} />
+                  )}
+                  {previewItem.kind === 'code' && <CodeViewer url={previewItem.url} />}
+                  {(previewItem.kind === 'excel' || previewItem.kind === 'csv') && (
+                    <SpreadsheetViewer url={previewItem.url} />
+                  )}
+                  {previewItem.kind === 'image' && (
+                    <ImageViewer url={previewItem.url} title={previewItem.title} />
+                  )}
+                  {previewItem.kind === 'native' && (
+                    <>
+                      <iframe 
+                        src={previewItem.url} 
+                        className="w-full h-full border-none absolute inset-0"
+                        title="Document Preview"
+                      />
+                      <div className="text-center p-8 text-neutral-500 pointer-events-none z-0">
+                        <p className="mb-2">If the preview doesn&apos;t load automatically,</p>
+                        <p>this file type might not be supported by your browser.</p>
+                        <p className="mt-4 text-xs">Please use the download button instead.</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>

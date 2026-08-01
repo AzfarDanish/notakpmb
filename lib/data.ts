@@ -14,7 +14,7 @@ export type Programme = {
 
 export const programmes: Programme[] = [
   {
-    id: 'dip-cs',
+    id: 'dcs',
     code: 'COMPUTER SCIENCE',
     title: 'Diploma in Computer Science',
     description:
@@ -54,21 +54,21 @@ export const programmes: Programme[] = [
     ],
   },
   {
-    id: 'dip-business',
+    id: 'dbs',
     code: 'BUSINESS STUDIES',
     title: 'Diploma in Business Studies',
     description: 'Business fundamentals: management, marketing, and finance.',
     subjects: [],
   },
   {
-    id: 'dip-acc-data',
+    id: 'dia',
     code: 'ACCOUNT · DA',
     title: 'Diploma in Accounting + Data Analytic',
     description: 'Accounting combined with data analytics skills.',
     subjects: [],
   },
   {
-    id: 'cert-fab',
+    id: 'cfab',
     code: 'CERT FAB',
     title: 'Certificate in Finance, Accounting and Business',
     description: 'Foundational certificate covering finance, accounting, and business.',

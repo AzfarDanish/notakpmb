@@ -51,16 +51,12 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
               {formattedTitle}
             </h1>
 
-            <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
-              {totalFiles} FILES
-            </p>
-          </div>
-
-          <div className="mt-8 pb-12">
-            <ContributePanel subjectId={id} />
-            <p className="mt-6 text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
-              Created by Azfar Danish
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
+                {totalFiles} FILES
+              </p>
+              <ContributePanel subjectId={id} />
+            </div>
           </div>
         </div>
 
