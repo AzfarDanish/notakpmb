@@ -1,0 +1,94 @@
+import Link from 'next/link';
+import { searchArchiveWithCustom } from '@/lib/subjects';
+import { SearchInput } from '@/components/SearchInput';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { EmptyState } from '@/components/EmptyState';
+
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q } = await searchParams;
+  const query = q?.trim() ?? '';
+  const results = query ? await searchArchiveWithCustom(query) : null;
+
+  return (
+    <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">
+      <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Search' }]} />
+
+      <div className="mt-8 md:mt-12 max-w-2xl">
+        <h1 className="font-serif text-5xl md:text-7xl font-bold tracking-tight">
+          Search
+        </h1>
+        <div className="mt-8">
+          <SearchInput size="lg" autoFocus />
+        </div>
+      </div>
+
+      <div className="mt-12 md:mt-20 max-w-3xl">
+        {!query && (
+          <p className="text-sm text-neutral-500">
+            Search by programme name, subject title, or course code — for
+            example &ldquo;cybersecurity&rdquo; or &ldquo;CSC 1413&rdquo;.
+          </p>
+        )}
+
+        {query && results && results.programmes.length === 0 && results.subjects.length === 0 && (
+          <EmptyState
+            title={`No results for "${query}"`}
+            hint="Try a different name or course code."
+          />
+        )}
+
+        {query && results && results.programmes.length > 0 && (
+          <section className="mb-14">
+            <h2 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
+              Programmes
+            </h2>
+            <div className="flex flex-col gap-6 md:gap-8">
+              {results.programmes.map((programme) => (
+                <Link
+                  key={programme.id}
+                  href={`/programme/${programme.id}`}
+                  className="group"
+                >
+                  <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
+                    {programme.code}
+                  </p>
+                  <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
+                    {programme.title}
+                  </h3>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {query && results && results.subjects.length > 0 && (
+          <section>
+            <h2 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
+              Subjects
+            </h2>
+            <div className="flex flex-col gap-6 md:gap-8">
+              {results.subjects.map(({ subject, programme, semester }) => (
+                <Link
+                  key={subject.id}
+                  href={`/subject/${subject.id}`}
+                  className="group"
+                >
+                  <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
+                    {subject.title}
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {subject.code} · {semester.title} · {programme.code}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}

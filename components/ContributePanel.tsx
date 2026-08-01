@@ -83,7 +83,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full md:w-[500px] bg-[#F9F8F6] shadow-2xl z-50 flex flex-col"
+              className="fixed top-0 right-0 bottom-0 w-full md:w-[500px] bg-paper shadow-2xl z-50 flex flex-col"
             >
               <div className="p-6 md:p-12 flex-1 overflow-y-auto">
                 <div className="flex items-center justify-between mb-12 md:mb-24">
@@ -109,7 +109,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
 
                   <div className="flex items-center gap-6">
                     <label className="flex items-center gap-2 cursor-pointer group">
-                      <div className={`w-1.5 h-1.5 rounded-full ${category === 'Notes' ? 'bg-[#A32A2A]' : 'bg-transparent group-hover:bg-neutral-300'} transition-colors`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${category === 'Notes' ? 'bg-accent' : 'bg-transparent group-hover:bg-neutral-300'} transition-colors`} />
                       <span className={`text-sm ${category === 'Notes' ? 'text-neutral-900' : 'text-neutral-500'}`}>Notes</span>
                       <input 
                         type="radio" 
@@ -121,7 +121,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                       />
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer group">
-                      <div className={`w-1.5 h-1.5 rounded-full ${category === 'Exercises' ? 'bg-[#A32A2A]' : 'bg-transparent group-hover:bg-neutral-300'} transition-colors`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${category === 'Exercises' ? 'bg-accent' : 'bg-transparent group-hover:bg-neutral-300'} transition-colors`} />
                       <span className={`text-sm ${category === 'Exercises' ? 'text-neutral-900' : 'text-neutral-500'}`}>Exercises</span>
                       <input 
                         type="radio" 
@@ -170,7 +170,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                     />
                     {file ? (
                       <>
-                        <div className="w-8 h-10 bg-[#A32A2A] rounded-sm flex items-center justify-center mb-2">
+                        <div className="w-8 h-10 bg-accent rounded-sm flex items-center justify-center mb-2">
                           <FileText size={18} strokeWidth={2} className="text-white" />
                         </div>
                         <p className="font-serif text-neutral-900 text-lg">
@@ -204,7 +204,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                 <button 
                   onClick={handlePublish}
                   disabled={!file || !title.trim() || isUploading}
-                  className="w-full bg-[#1A1A1A] text-white py-5 text-[10px] tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full bg-ink text-white py-5 text-[10px] tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUploading ? <><Loader2 size={14} className="animate-spin" /> PUBLISHING...</> : 'PUBLISH'}
                 </button>

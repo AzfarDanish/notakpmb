@@ -1,20 +1,26 @@
 import { S3Client, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
 
-export const getR2Client = () => {
+export const isR2Configured = () => {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  return Boolean(
+    accountId && accessKeyId && secretAccessKey &&
+    !accountId.includes('TODO') && process.env.R2_BUCKET_NAME,
+  );
+};
 
-  if (!accountId || !accessKeyId || !secretAccessKey || accountId.includes('TODO')) {
+export const getR2Client = () => {
+  if (!isR2Configured()) {
     return null;
   }
 
   return new S3Client({
     region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     credentials: {
-      accessKeyId,
-      secretAccessKey,
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     },
   });
 };
@@ -35,7 +41,7 @@ export async function getAllFileCounts(): Promise<Record<string, number>> {
     for (const item of Contents) {
       if (!item.Key) continue;
       const subjectId = item.Key.split('/')[0];
-      if (subjectId) {
+      if (subjectId && !subjectId.startsWith('_')) {
         counts[subjectId] = (counts[subjectId] || 0) + 1;
       }
     }

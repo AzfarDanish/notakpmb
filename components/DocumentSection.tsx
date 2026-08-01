@@ -12,7 +12,7 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
-  if (!items || items.length === 0) return null;
+  const isEmpty = !items || items.length === 0;
 
   const handleDelete = async () => {
     if (!deleteItem) return;
@@ -40,7 +40,18 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
       <h3 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
         {title}
       </h3>
-      <div className="flex flex-col gap-6 md:gap-8">
+      {isEmpty && (
+        <div className="border border-dashed border-neutral-300 rounded-sm p-8 text-center">
+          <p className="font-serif text-lg text-neutral-500">
+            No {title.toLowerCase()} yet
+          </p>
+          <p className="text-xs text-neutral-400 mt-2">
+            Be the first to contribute.
+          </p>
+        </div>
+      )}
+      {!isEmpty && (
+        <div className="flex flex-col gap-6 md:gap-8">
         {items.map((item) => (
           <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
             <button 
@@ -95,6 +106,7 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
           </div>
         ))}
       </div>
+      )}
 
       <AnimatePresence>
         {previewItem && (
@@ -111,7 +123,7 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full md:w-[800px] bg-[#F9F8F6] shadow-2xl z-50 flex flex-col"
+              className="fixed top-0 right-0 bottom-0 w-full md:w-[800px] bg-paper shadow-2xl z-50 flex flex-col"
             >
               <div className="p-6 md:p-12 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-6 md:mb-8 shrink-0">

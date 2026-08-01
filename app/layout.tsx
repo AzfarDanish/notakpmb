@@ -1,17 +1,17 @@
 import type {Metadata} from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import localFont from 'next/font/local';
 import Script from 'next/script';
+import { SiteHeader } from '@/components/SiteHeader';
 import './globals.css';
 
-const inter = Inter({
-  subsets: ['latin'],
+const sfProDisplay = localFont({
+  src: [
+    { path: '../fonts/SFPRODISPLAYREGULAR.otf', weight: '400', style: 'normal' },
+    { path: '../fonts/SFPRODISPLAYMEDIUM.otf', weight: '500', style: 'normal' },
+    { path: '../fonts/SFPRODISPLAYBOLD.otf', weight: '700', style: 'normal' },
+  ],
   variable: '--font-sans',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-serif',
-  style: ['normal', 'italic'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -39,8 +39,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="bg-[#F9F8F6] text-neutral-900 font-sans antialiased selection:bg-neutral-200 flex flex-col min-h-screen" suppressHydrationWarning>
+    <html lang="en" className={`${sfProDisplay.variable}`}>
+      <body className="bg-paper text-neutral-900 font-sans antialiased selection:bg-neutral-200 flex flex-col min-h-screen" suppressHydrationWarning>
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:bg-ink focus:text-paper focus:px-4 focus:py-2 focus:text-xs focus:tracking-widest focus:uppercase focus:rounded-sm"
+        >
+          Skip to content
+        </a>
+        <SiteHeader />
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-WJG1B5VZDS" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
