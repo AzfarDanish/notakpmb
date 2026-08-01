@@ -1,16 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Eye, X, Trash2, Loader2 } from 'lucide-react';
+import { X, Trash2, Loader2, Eye, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import { MoreMenu } from '@/components/MoreMenu';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { R2Document } from '@/lib/r2';
 
-export function DocumentSection({ title, items }: { title: string, items: R2Document[] }) {
-  const [previewItem, setPreviewItem] = useState<{url: string, title: string} | null>(null);
+export function DocumentSection({ title, items, scrollable = false }: { title: string, items: R2Document[], scrollable?: boolean }) {
+  const [previewItem, setPreviewItem] = useState<{url: string, title: string, downloadUrl: string} | null>(null);
   const [deleteItem, setDeleteItem] = useState<{key: string, title: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+
+  useScrollLock(Boolean(previewItem));
 
   const isEmpty = !items || items.length === 0;
 
@@ -36,8 +40,8 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
   };
 
   return (
-    <section>
-      <h3 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
+    <section className={scrollable ? 'flex flex-col flex-1 min-h-0' : undefined}>
+      <h3 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4 shrink-0">
         {title}
       </h3>
       {isEmpty && (
@@ -51,13 +55,14 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
         </div>
       )}
       {!isEmpty && (
-        <div className="flex flex-col gap-6 md:gap-8">
+        <div className={`flex flex-col gap-6 md:gap-8 ${scrollable ? 'flex-1 min-h-0 overflow-y-auto md:pr-2 md:pb-12' : ''}`}>
         {items.map((item) => (
           <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
             <button 
               onClick={() => setPreviewItem({
                 url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
-                title: item.title
+                title: item.title,
+                downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
               })}
               className="flex-1 text-left cursor-pointer"
             >
@@ -73,34 +78,39 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
             <div className="flex items-center gap-4 text-sm text-neutral-500 shrink-0">
               <span className="w-24 text-right hidden sm:block">{item.date}</span>
               <span className="w-16 text-right hidden sm:block">{item.size}</span>
-              
+
               {item.key && (
-                <div className="flex items-center gap-2 ml-0 sm:ml-4 self-end sm:self-auto">
-                  <button 
-                    onClick={() => setPreviewItem({
-                      url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
-                      title: item.title
-                    })}
-                    className="p-2 hover:bg-neutral-200 rounded-full transition-colors text-neutral-900 flex items-center gap-2"
-                    title="Preview"
-                  >
-                    <Eye size={18} strokeWidth={1.5} />
-                  </button>
-                  <a 
-                    href={`/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`}
-                    className="p-2 hover:bg-neutral-200 rounded-full transition-colors text-neutral-900 flex items-center gap-2"
-                    title="Download"
-                  >
-                    <Download size={18} strokeWidth={1.5} />
-                  </a>
-                  <button 
-                    onClick={() => setDeleteItem({ key: item.key, title: item.title })}
-                    className="p-2 hover:bg-red-100 rounded-full transition-colors text-red-500 flex items-center gap-2"
-                    title="Delete"
-                  >
-                    <Trash2 size={18} strokeWidth={1.5} />
-                  </button>
-                </div>
+                <MoreMenu
+                  label={`Actions for ${item.title}`}
+                  items={[
+                    {
+                      key: 'preview',
+                      label: 'Preview',
+                      icon: <Eye size={16} strokeWidth={1.5} />,
+                      onClick: () =>
+                        setPreviewItem({
+                          url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
+                          title: item.title,
+                          downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
+                        }),
+                    },
+                    {
+                      key: 'download',
+                      label: 'Download',
+                      icon: <Download size={16} strokeWidth={1.5} />,
+                      onClick: () => {
+                        window.location.href = `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`;
+                      },
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete',
+                      danger: true,
+                      icon: <Trash2 size={16} strokeWidth={1.5} />,
+                      onClick: () => setDeleteItem({ key: item.key, title: item.title }),
+                    },
+                  ]}
+                />
               )}
             </div>
           </div>
@@ -126,16 +136,27 @@ export function DocumentSection({ title, items }: { title: string, items: R2Docu
               className="fixed top-0 right-0 bottom-0 w-full md:w-[800px] bg-paper shadow-2xl z-50 flex flex-col"
             >
               <div className="p-6 md:p-12 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6 md:mb-8 shrink-0">
-                  <span className="text-[10px] tracking-widest text-neutral-500 uppercase font-medium truncate pr-4">
+                <div className="flex items-center justify-between gap-4 mb-6 md:mb-8 shrink-0">
+                  <span className="text-[10px] tracking-widest text-neutral-500 uppercase font-medium truncate pr-2">
                     PREVIEW &middot; {previewItem.title}
                   </span>
-                  <button 
-                    onClick={() => setPreviewItem(null)}
-                    className="text-neutral-400 hover:text-neutral-900 transition-colors shrink-0"
-                  >
-                    <X size={20} strokeWidth={1.5} />
-                  </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <a
+                      href={previewItem.downloadUrl}
+                      className="flex items-center gap-2 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+                      title="Download"
+                    >
+                      <Download size={16} strokeWidth={1.5} />
+                      DOWNLOAD
+                    </a>
+                    <button 
+                      onClick={() => setPreviewItem(null)}
+                      className="text-neutral-400 hover:text-neutral-900 transition-colors"
+                      aria-label="Close preview"
+                    >
+                      <X size={20} strokeWidth={1.5} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 bg-white rounded-sm border border-neutral-200 overflow-hidden relative shadow-inner flex items-center justify-center">

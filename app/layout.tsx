@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${sfProDisplay.variable}`}>
-      <body className="bg-paper text-neutral-900 font-sans antialiased selection:bg-neutral-200 flex flex-col min-h-screen" suppressHydrationWarning>
+      <body className="bg-paper text-neutral-900 font-sans antialiased selection:bg-neutral-200 flex flex-col min-h-screen md:h-dvh md:overflow-hidden" suppressHydrationWarning>
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:bg-ink focus:text-paper focus:px-4 focus:py-2 focus:text-xs focus:tracking-widest focus:uppercase focus:rounded-sm"
@@ -58,12 +58,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
             gtag('config', 'G-WJG1B5VZDS');
           `}
         </Script>
-        <div className="flex-1">
+        <div id="scroll-root" className="flex-1 md:min-h-0 md:overflow-y-auto">
           {children}
         </div>
-        <footer className="p-6 md:px-12 text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
-          Created by Azfar Danish
-        </footer>
       </body>
     </html>
   );

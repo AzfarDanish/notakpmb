@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { Loader2, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
+import { MoreMenu } from '@/components/MoreMenu';
 import type { Subject } from '@/lib/data';
 
 export function SubjectList({
@@ -95,14 +96,20 @@ export function SubjectList({
                 )}
               </Link>
               {canManage && (
-                <button
-                  onClick={() => setDeleteSubject(subject)}
-                  className="absolute top-0 right-0 p-2 rounded-full transition-colors text-neutral-300 hover:text-red-500 hover:bg-red-100 cursor-pointer"
-                  title={`Delete ${subject.title}`}
-                  aria-label={`Delete ${subject.title}`}
-                >
-                  <Trash2 size={18} strokeWidth={1.5} />
-                </button>
+                <div className="absolute top-0 right-0">
+                  <MoreMenu
+                    label={`Actions for ${subject.title}`}
+                    items={[
+                      {
+                        key: 'delete',
+                        label: 'Delete Subject',
+                        danger: true,
+                        icon: <Trash2 size={16} strokeWidth={1.5} />,
+                        onClick: () => setDeleteSubject(subject),
+                      },
+                    ]}
+                  />
+                </div>
               )}
             </div>
           ))}

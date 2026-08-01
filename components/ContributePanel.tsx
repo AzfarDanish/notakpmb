@@ -4,16 +4,18 @@ import { useState, useRef } from 'react';
 import { X, ArrowUp, Loader2, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 export function ContributePanel({ subjectId }: { subjectId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [category, setCategory] = useState('Notes');
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useScrollLock(isOpen);
 
   const handlePublish = async () => {
     if (!file || !title.trim() || !subjectId) return;
@@ -23,7 +25,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('subjectId', subjectId);
-      formData.append('category', category);
+      formData.append('category', 'files');
       formData.append('title', title);
 
       const res = await fetch('/api/upload', {
@@ -106,33 +108,6 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full bg-transparent border-none outline-none font-serif text-4xl md:text-5xl italic placeholder:text-neutral-300 text-neutral-900"
                   />
-
-                  <div className="flex items-center gap-6">
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                      <div className={`w-1.5 h-1.5 rounded-full ${category === 'Notes' ? 'bg-accent' : 'bg-transparent group-hover:bg-neutral-300'} transition-colors`} />
-                      <span className={`text-sm ${category === 'Notes' ? 'text-neutral-900' : 'text-neutral-500'}`}>Notes</span>
-                      <input 
-                        type="radio" 
-                        name="category" 
-                        value="Notes" 
-                        checked={category === 'Notes'}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="hidden"
-                      />
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                      <div className={`w-1.5 h-1.5 rounded-full ${category === 'Exercises' ? 'bg-accent' : 'bg-transparent group-hover:bg-neutral-300'} transition-colors`} />
-                      <span className={`text-sm ${category === 'Exercises' ? 'text-neutral-900' : 'text-neutral-500'}`}>Exercises</span>
-                      <input 
-                        type="radio" 
-                        name="category" 
-                        value="Exercises" 
-                        checked={category === 'Exercises'}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
 
                   <div 
                     onClick={() => fileInputRef.current?.click()}

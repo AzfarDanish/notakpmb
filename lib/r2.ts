@@ -58,17 +58,12 @@ export type R2Document = {
   title: string
   date: string
   size: string
-  category: string
   originalName: string
 }
 
 export async function getSubjectDocuments(
   subjectId: string,
-): Promise<{
-  notes: R2Document[]
-  exercises: R2Document[]
-  references: R2Document[]
-} | null> {
+): Promise<R2Document[] | null> {
   const client = getR2Client();
   if (!client || !process.env.R2_BUCKET_NAME) return null;
 
@@ -79,10 +74,12 @@ export async function getSubjectDocuments(
     });
     const { Contents } = await client.send(listCmd);
     
-    if (!Contents) return { notes: [], exercises: [], references: [] };
+    if (!Contents) return [];
 
     const keyedContents = Contents.filter(
       (item): item is typeof item & { Key: string } => !!item.Key,
+    ).sort(
+      (a, b) => (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0),
     );
 
     const docs = await Promise.all(keyedContents.map(async (item) => {
@@ -92,7 +89,6 @@ export async function getSubjectDocuments(
       });
       const head = await client.send(headCmd);
       
-      const category = item.Key?.split('/')[1] || 'notes';
       const title = head.Metadata?.title ? decodeURIComponent(head.Metadata.title) : item.Key?.split('/').pop() || 'Untitled';
       
       const date = item.LastModified ? item.LastModified.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '';
@@ -116,16 +112,11 @@ export async function getSubjectDocuments(
         title,
         date,
         size: sizeStr,
-        category,
         originalName,
       };
     }));
 
-    return {
-      notes: docs.filter(d => d.category === 'notes'),
-      exercises: docs.filter(d => d.category === 'exercises'),
-      references: docs.filter(d => d.category === 'references'),
-    };
+    return docs;
   } catch (e) {
     if (isR2AccessDenied(e)) {
       console.warn('R2 Access Denied: Please check your Cloudflare R2 credentials in the Secrets panel.');
