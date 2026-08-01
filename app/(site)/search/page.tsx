@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { searchArchiveWithCustom } from '@/lib/subjects';
+import { searchArchiveWithCustom, getSubjectWithCustom } from '@/lib/subjects';
+import { searchFiles } from '@/lib/r2';
 import { SearchInput } from '@/components/SearchInput';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { EmptyState } from '@/components/EmptyState';
@@ -12,6 +13,21 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
   const results = query ? await searchArchiveWithCustom(query) : null;
+  const files = query ? await searchFiles(query) : null;
+
+  const fileContexts = files?.length
+    ? await Promise.all(
+        files.map(async (file) => ({
+          file,
+          context: await getSubjectWithCustom(file.subjectId),
+        })),
+      )
+    : [];
+
+  const visibleFiles = fileContexts.filter(
+    (entry): entry is typeof entry & { context: NonNullable<typeof entry.context> } =>
+      Boolean(entry.context),
+  );
 
   return (
     <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">
@@ -29,12 +45,15 @@ export default async function SearchPage({
       <div className="mt-12 md:mt-20 max-w-3xl">
         {!query && (
           <p className="text-sm text-neutral-500">
-            Search by programme name, subject title, or course code — for
-            example &ldquo;cybersecurity&rdquo; or &ldquo;CSC 1413&rdquo;.
+            Search by subject title, course code, or file name — for
+            example &ldquo;database&rdquo; or &ldquo;CSC 1413&rdquo;.
           </p>
         )}
 
-        {query && results && results.programmes.length === 0 && results.subjects.length === 0 && (
+        {query && results && files &&
+          results.programmes.length === 0 &&
+          results.subjects.length === 0 &&
+          files.length === 0 && (
           <EmptyState
             title={`No results for "${query}"`}
             hint="Try a different name or course code."
@@ -71,7 +90,7 @@ export default async function SearchPage({
               Subjects
             </h2>
             <div className="flex flex-col gap-6 md:gap-8">
-              {results.subjects.map(({ subject, programme, semester }) => (
+              {results.subjects.map(({ subject, programme }) => (
                 <Link
                   key={subject.id}
                   href={`/subject/${subject.id}`}
@@ -81,7 +100,32 @@ export default async function SearchPage({
                     {subject.title}
                   </h3>
                   <p className="text-xs text-neutral-500 mt-1">
-                    {subject.code} · {semester.title} · {programme.code}
+                    {subject.code} · {programme.code}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {visibleFiles.length > 0 && (
+          <section className="mt-14">
+            <h2 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
+              Files
+            </h2>
+            <div className="flex flex-col gap-6 md:gap-8">
+              {visibleFiles.map(({ file, context }) => (
+                <Link
+                  key={file.key}
+                  href={`/subject/${file.subjectId}`}
+                  className="group"
+                >
+                  <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
+                    {file.title}
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {file.originalName} · {context.subject.title} ·{' '}
+                    {context.programme.code}
                   </p>
                 </Link>
               ))}

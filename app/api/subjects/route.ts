@@ -14,14 +14,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { programmeId, semesterId, title, code, intake } = (body ?? {}) as Record<string, unknown>;
+  const { programmeId, title, code, intake } = (body ?? {}) as Record<string, unknown>;
   if (
     typeof programmeId !== 'string' ||
-    typeof semesterId !== 'string' ||
     typeof title !== 'string'
   ) {
     return NextResponse.json(
-      { error: 'programmeId, semesterId and title are required' },
+      { error: 'programmeId and title are required' },
       { status: 400 },
     );
   }
@@ -32,7 +31,6 @@ export async function POST(request: NextRequest) {
   try {
     const subject = await addSubject({
       programmeId,
-      semesterId,
       title,
       code: typeof code === 'string' ? code : undefined,
       intake: typeof intake === 'string' ? intake : undefined,
@@ -41,7 +39,7 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     if (
       e instanceof Error &&
-      (e.message === 'Unknown programme or semester' ||
+      (e.message === 'Unknown programme' ||
         e.message === 'Subject title is required')
     ) {
       return NextResponse.json({ error: e.message }, { status: 400 });

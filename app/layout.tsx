@@ -1,7 +1,6 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import Script from 'next/script';
-import { SiteHeader } from '@/components/SiteHeader';
 import './globals.css';
 
 const sfProDisplay = localFont({
@@ -28,7 +27,7 @@ export const metadata: Metadata = {
         url: '/notakpmb-og.webp',
         width: 1200,
         height: 630,
-        alt: 'NotaKPMB - The Archive',
+        alt: 'Nota KPMB - The Archive',
       },
     ],
   },
@@ -47,7 +46,6 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         >
           Skip to content
         </a>
-        <SiteHeader />
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-WJG1B5VZDS" strategy="afterInteractive" />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
@@ -58,7 +56,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
             gtag('config', 'G-WJG1B5VZDS');
           `}
         </Script>
-        <div id="scroll-root" className="flex-1 md:min-h-0 md:overflow-y-auto">
+        <div id="scroll-root" className="flex-1 md:min-h-0 md:overflow-y-auto md:flex md:flex-col">
           {children}
         </div>
       </body>

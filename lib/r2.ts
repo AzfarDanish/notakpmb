@@ -61,6 +61,58 @@ export type R2Document = {
   originalName: string
 }
 
+export type FileSearchResult = {
+  subjectId: string
+  key: string
+  title: string
+  originalName: string
+}
+
+export async function searchFiles(query: string): Promise<FileSearchResult[]> {
+  const client = getR2Client();
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!client || !bucket) return [];
+
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  try {
+    const listCmd = new ListObjectsV2Command({ Bucket: bucket });
+    const { Contents } = await client.send(listCmd);
+    if (!Contents) return [];
+
+    const results: FileSearchResult[] = [];
+    for (const item of Contents) {
+      if (!item.Key) continue;
+      const subjectId = item.Key.split('/')[0];
+      if (!subjectId || subjectId.startsWith('_')) continue;
+
+      const fileName = item.Key.split('/').pop() || '';
+      const head = await client.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: item.Key }),
+      );
+      const title = head.Metadata?.title
+        ? decodeURIComponent(head.Metadata.title)
+        : fileName;
+      const originalName = head.Metadata?.originalname
+        ? decodeURIComponent(head.Metadata.originalname)
+        : fileName.replace(/^\d+-/, '');
+
+      if (
+        title.toLowerCase().includes(q) ||
+        originalName.toLowerCase().includes(q) ||
+        fileName.toLowerCase().includes(q)
+      ) {
+        results.push({ subjectId, key: item.Key, title, originalName });
+      }
+    }
+    return results;
+  } catch (e) {
+    console.error('Failed to search files in R2:', e);
+    return [];
+  }
+}
+
 export async function getSubjectDocuments(
   subjectId: string,
 ): Promise<R2Document[] | null> {

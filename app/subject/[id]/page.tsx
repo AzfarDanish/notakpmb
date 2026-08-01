@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { ContributePanel } from '@/components/ContributePanel';
 import { DocumentSection } from '@/components/DocumentSection';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -15,7 +14,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const { subject, programme, semester } = found;
+  const { subject, programme } = found;
 
   const documents = r2Docs || [];
 
@@ -29,17 +28,13 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
   return (
     <main
       id="main"
-      className="max-w-7xl mx-auto px-6 py-12 md:py-0 md:px-12 md:h-full md:flex md:flex-col md:overflow-hidden"
+      className="max-w-7xl mx-auto px-6 py-12 md:py-0 md:px-12 md:flex-1 md:min-h-0 md:flex md:flex-col md:overflow-hidden"
     >
       <div className="md:shrink-0 md:pt-12">
         <Breadcrumbs
           items={[
             { label: 'Index', href: '/' },
             { label: programme.code, href: `/programme/${programme.id}` },
-            {
-              label: semester.title,
-              href: `/programme/${programme.id}/semester/${semester.id}`,
-            },
             { label: subject.title },
           ]}
         />
@@ -48,13 +43,6 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
       <div className="mt-8 md:mt-12 flex flex-col md:flex-row gap-12 md:gap-32 relative md:flex-1 md:min-h-0">
         <div className="md:w-1/3 flex flex-col md:min-h-0">
           <div>
-            <Link
-              href={`/programme/${programme.id}/semester/${semester.id}`}
-              className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase hover:text-neutral-900 transition-colors flex items-center gap-2 mb-8 md:mb-12 w-fit"
-            >
-              <span>&larr;</span> SEMESTER OVERVIEW
-            </Link>
-
             <p className="text-[10px] tracking-widest text-accent uppercase font-bold mb-4">
               {subject.code}
             </p>
@@ -64,11 +52,11 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
             </h1>
 
             <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
-              {totalFiles} FILES <span className="mx-2">&middot;</span> {semester.title.toUpperCase()}
+              {totalFiles} FILES
             </p>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 pb-12">
             <ContributePanel subjectId={id} />
             <p className="mt-6 text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
               Created by Azfar Danish

@@ -12,15 +12,13 @@ import type { Subject } from '@/lib/data';
 export function SubjectList({
   subjects,
   programmeId,
-  semesterId,
-  semesterTitle,
+  programmeTitle,
   canManage,
   intakeOptions,
 }: {
   subjects: (Subject & { intake?: string })[]
   programmeId: string
-  semesterId: string
-  semesterTitle: string
+  programmeTitle: string
   canManage: boolean
   intakeOptions: string[]
 }) {
@@ -62,7 +60,7 @@ export function SubjectList({
 
       {subjects.length === 0 && (
         <EmptyState
-          title={`No subjects published for ${semesterTitle} yet`}
+          title={`No subjects published for ${programmeTitle} yet`}
           hint={
             canManage
               ? 'Add the first subject below.'
@@ -73,7 +71,7 @@ export function SubjectList({
 
       {hasFilteredOut && (
         <EmptyState
-          title={`No subjects for ${selectedIntake} in ${semesterTitle}`}
+          title={`No subjects for ${selectedIntake} yet`}
           hint="Try a different intake or view all subjects."
         />
       )}
@@ -139,7 +137,6 @@ export function SubjectList({
               router.refresh();
             }}
             programmeId={programmeId}
-            semesterId={semesterId}
           />
         )}
       </AnimatePresence>
@@ -196,12 +193,10 @@ function AddSubjectModal({
   onClose,
   onAdded,
   programmeId,
-  semesterId,
 }: {
   onClose: () => void
   onAdded: () => void
   programmeId: string
-  semesterId: string
 }) {
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
@@ -220,7 +215,6 @@ function AddSubjectModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           programmeId,
-          semesterId,
           title: title.trim(),
           code: code.trim() || undefined,
           intake: intake.trim() || undefined,
@@ -247,9 +241,6 @@ function AddSubjectModal({
           <h3 className="font-serif text-2xl font-bold text-neutral-900">
             Add Subject
           </h3>
-          <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest">
-            Semester {semesterId}
-          </p>
         </div>
         <button
           onClick={onClose}

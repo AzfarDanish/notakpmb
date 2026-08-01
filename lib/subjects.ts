@@ -7,7 +7,6 @@ import {
 import { getR2Client } from '@/lib/r2';
 import {
   getProgramme,
-  getProgrammeSemester,
   getSubject,
   searchArchive,
   type Subject,
@@ -16,7 +15,6 @@ import {
 
 export type ManagedSubject = Subject & {
   programmeId: string
-  semesterId: string
   intake?: string
 }
 
@@ -97,13 +95,12 @@ export async function getCustomSubjects(): Promise<ManagedSubject[]> {
   return manifest.subjects;
 }
 
-export async function getSubjectsForSemester(
+export async function getSubjectsForProgramme(
   programmeId: string,
-  semesterId: string,
   intake?: string,
 ): Promise<(Subject & { intake?: string })[]> {
-  const semester = getProgrammeSemester(programmeId, semesterId);
-  if (!semester) return [];
+  const programme = getProgramme(programmeId);
+  if (!programme) return [];
 
   const manifest = await readManifest();
   const deleted = new Set(manifest.deletedSubjectIds);
@@ -114,12 +111,12 @@ export async function getSubjectsForSemester(
       .map((e) => e.subjectId),
   );
 
-  const staticSubjects = semester.subjects.filter(
+  const staticSubjects = programme.subjects.filter(
     (s) => !deleted.has(s.id) && !(intake && excludedForIntake.has(s.id)),
   );
 
   const customSubjects = manifest.subjects
-    .filter((s) => s.programmeId === programmeId && s.semesterId === semesterId)
+    .filter((s) => s.programmeId === programmeId)
     .filter((s) => !intake || !s.intake || s.intake === intake)
     .map((s) => ({ id: s.id, title: s.title, code: s.code, intake: s.intake }));
 
@@ -167,25 +164,22 @@ export async function getSubjectWithCustom(
   if (!managed) return undefined;
 
   const programme = getProgramme(managed.programmeId);
-  const semester = getProgrammeSemester(managed.programmeId, managed.semesterId);
-  if (!programme || !semester) return undefined;
+  if (!programme) return undefined;
 
   return {
     subject: { id: managed.id, title: managed.title, code: managed.code },
     programme,
-    semester,
   };
 }
 
 export async function addSubject(input: {
   programmeId: string
-  semesterId: string
   title: string
   code?: string
   intake?: string
 }): Promise<ManagedSubject> {
-  const semester = getProgrammeSemester(input.programmeId, input.semesterId);
-  if (!semester) throw new Error('Unknown programme or semester');
+  const programme = getProgramme(input.programmeId);
+  if (!programme) throw new Error('Unknown programme');
 
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
@@ -196,7 +190,6 @@ export async function addSubject(input: {
     title,
     code: (input.code ?? '').trim(),
     programmeId: input.programmeId,
-    semesterId: input.semesterId,
   };
 
   const intake = input.intake?.trim();
@@ -260,8 +253,7 @@ export async function searchArchiveWithCustom(query: string): Promise<{
   for (const managed of manifest.subjects) {
     if (!q) continue;
     const programme = getProgramme(managed.programmeId);
-    const semester = getProgrammeSemester(managed.programmeId, managed.semesterId);
-    if (!programme || !semester) continue;
+    if (!programme) continue;
     if (
       managed.title.toLowerCase().includes(q) ||
       managed.code.toLowerCase().includes(q)
@@ -269,7 +261,6 @@ export async function searchArchiveWithCustom(query: string): Promise<{
       results.subjects.push({
         subject: { id: managed.id, title: managed.title, code: managed.code },
         programme,
-        semester,
       });
     }
   }
