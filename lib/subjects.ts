@@ -17,16 +17,27 @@ import {
 export type ManagedSubject = Subject & {
   programmeId: string
   semesterId: string
+  intake?: string
+}
+
+type IntakeExclusion = {
+  subjectId: string
+  intake: string
 }
 
 type Manifest = {
   subjects: ManagedSubject[]
   deletedSubjectIds: string[]
+  intakeExclusions: IntakeExclusion[]
 }
 
 const MANIFEST_KEY = '_subjects.json'
 
-const EMPTY_MANIFEST: Manifest = { subjects: [], deletedSubjectIds: [] }
+const EMPTY_MANIFEST: Manifest = {
+  subjects: [],
+  deletedSubjectIds: [],
+  intakeExclusions: [],
+}
 
 async function readManifest(): Promise<Manifest> {
   const client = getR2Client();
@@ -44,6 +55,9 @@ async function readManifest(): Promise<Manifest> {
       subjects: Array.isArray(parsed.subjects) ? parsed.subjects : [],
       deletedSubjectIds: Array.isArray(parsed.deletedSubjectIds)
         ? parsed.deletedSubjectIds
+        : [],
+      intakeExclusions: Array.isArray(parsed.intakeExclusions)
+        ? parsed.intakeExclusions
         : [],
     };
   } catch (e) {
@@ -86,17 +100,56 @@ export async function getCustomSubjects(): Promise<ManagedSubject[]> {
 export async function getSubjectsForSemester(
   programmeId: string,
   semesterId: string,
-): Promise<Subject[]> {
+  intake?: string,
+): Promise<(Subject & { intake?: string })[]> {
   const semester = getProgrammeSemester(programmeId, semesterId);
   if (!semester) return [];
 
   const manifest = await readManifest();
   const deleted = new Set(manifest.deletedSubjectIds);
-  const staticSubjects = semester.subjects.filter((s) => !deleted.has(s.id));
-  const customSubjects = manifest.subjects.filter(
-    (s) => s.programmeId === programmeId && s.semesterId === semesterId,
+
+  const excludedForIntake = new Set(
+    manifest.intakeExclusions
+      .filter((e) => e.intake === intake && subjectBelongsToProgramme(manifest, e.subjectId, programmeId))
+      .map((e) => e.subjectId),
   );
+
+  const staticSubjects = semester.subjects.filter(
+    (s) => !deleted.has(s.id) && !(intake && excludedForIntake.has(s.id)),
+  );
+
+  const customSubjects = manifest.subjects
+    .filter((s) => s.programmeId === programmeId && s.semesterId === semesterId)
+    .filter((s) => !intake || !s.intake || s.intake === intake)
+    .map((s) => ({ id: s.id, title: s.title, code: s.code, intake: s.intake }));
+
   return [...staticSubjects, ...customSubjects];
+}
+
+function subjectBelongsToProgramme(
+  manifest: Manifest,
+  subjectId: string,
+  programmeId: string,
+): boolean {
+  const custom = manifest.subjects.find((s) => s.id === subjectId);
+  if (custom) return custom.programmeId === programmeId;
+  return getSubject(subjectId)?.programme.id === programmeId;
+}
+
+export async function getIntakeOptions(programmeId: string): Promise<string[]> {
+  const manifest = await readManifest();
+  const intakes = new Set<string>();
+
+  for (const s of manifest.subjects) {
+    if (s.programmeId === programmeId && s.intake) intakes.add(s.intake);
+  }
+  for (const e of manifest.intakeExclusions) {
+    if (subjectBelongsToProgramme(manifest, e.subjectId, programmeId)) {
+      intakes.add(e.intake);
+    }
+  }
+
+  return [...intakes];
 }
 
 export async function getSubjectWithCustom(
@@ -129,6 +182,7 @@ export async function addSubject(input: {
   semesterId: string
   title: string
   code?: string
+  intake?: string
 }): Promise<ManagedSubject> {
   const semester = getProgrammeSemester(input.programmeId, input.semesterId);
   if (!semester) throw new Error('Unknown programme or semester');
@@ -144,6 +198,9 @@ export async function addSubject(input: {
     programmeId: input.programmeId,
     semesterId: input.semesterId,
   };
+
+  const intake = input.intake?.trim();
+  if (intake) subject.intake = intake;
 
   manifest.subjects.push(subject);
   await writeManifest(manifest);

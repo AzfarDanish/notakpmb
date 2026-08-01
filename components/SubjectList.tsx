@@ -14,73 +14,114 @@ export function SubjectList({
   semesterId,
   semesterTitle,
   canManage,
+  intakeOptions,
 }: {
-  subjects: Subject[]
+  subjects: (Subject & { intake?: string })[]
   programmeId: string
   semesterId: string
   semesterTitle: string
   canManage: boolean
+  intakeOptions: string[]
 }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+  const [selectedIntake, setSelectedIntake] = useState('ALL');
+
+  const visibleSubjects = subjects.filter(
+    (s) => selectedIntake === 'ALL' || !s.intake || s.intake === selectedIntake,
+  );
+  const hasFilteredOut = visibleSubjects.length === 0 && subjects.length > 0;
 
   return (
     <>
-      <div className="divide-y divide-neutral-200">
-        {subjects.length === 0 && (
-          <div className="pb-12">
-            <EmptyState
-              title={`No subjects published for ${semesterTitle} yet`}
-              hint={
-                canManage
-                  ? 'Add the first subject below.'
-                  : 'Subjects will appear here once they are added.'
-              }
-            />
-          </div>
-        )}
-
-        {subjects.map((subject) => (
-          <div
-            key={subject.id}
-            className="group flex items-baseline justify-between gap-6 py-6 md:py-8"
-          >
-            <Link href={`/subject/${subject.id}`} className="flex-1 min-w-0">
-              <p className="text-[10px] tracking-widest text-accent uppercase font-bold mb-2">
-                {subject.code}
-              </p>
-              <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
-                {subject.title}
-              </h3>
-            </Link>
-            {canManage && (
+      {intakeOptions.length > 0 && (
+        <div className="mb-10 md:mb-14">
+          <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium mb-3">
+            Intake
+          </p>
+          <div role="group" aria-label="Filter by intake" className="flex flex-wrap gap-2">
+            {['ALL', ...intakeOptions].map((intake) => (
               <button
-                onClick={() => setDeleteSubject(subject)}
-                className="p-2 rounded-full transition-colors text-neutral-300 hover:text-red-500 hover:bg-red-100 shrink-0 cursor-pointer"
-                title={`Delete ${subject.title}`}
-                aria-label={`Delete ${subject.title}`}
+                key={intake}
+                onClick={() => setSelectedIntake(intake)}
+                aria-pressed={selectedIntake === intake}
+                className={`rounded-full px-4 py-2 text-[10px] tracking-widest uppercase font-medium transition-colors cursor-pointer ${
+                  selectedIntake === intake
+                    ? 'bg-ink text-paper'
+                    : 'border border-neutral-300 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900'
+                }`}
               >
-                <Trash2 size={18} strokeWidth={1.5} />
+                {intake}
               </button>
-            )}
+            ))}
           </div>
-        ))}
+        </div>
+      )}
 
-        {canManage && (
-          <div className="py-6 md:py-8">
-            <button
-              onClick={() => setAddOpen(true)}
-              className="group flex items-center gap-4 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
-            >
-              <Plus size={18} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform" />
-              <span className="font-serif text-2xl md:text-3xl font-bold">
-                Add Subject
-              </span>
-            </button>
-          </div>
-        )}
-      </div>
+      {subjects.length === 0 && (
+        <EmptyState
+          title={`No subjects published for ${semesterTitle} yet`}
+          hint={
+            canManage
+              ? 'Add the first subject below.'
+              : 'Subjects will appear here once they are added.'
+          }
+        />
+      )}
+
+      {hasFilteredOut && (
+        <EmptyState
+          title={`No subjects for ${selectedIntake} in ${semesterTitle}`}
+          hint="Try a different intake or view all subjects."
+        />
+      )}
+
+      {visibleSubjects.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-12 md:gap-y-24">
+          {visibleSubjects.map((subject) => (
+            <div key={subject.id} className="group flex flex-col gap-2 relative">
+              <Link href={`/subject/${subject.id}`} className="flex flex-col gap-2 pr-8">
+                <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
+                  {subject.code}
+                </p>
+                <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
+                  {subject.title}
+                </h3>
+                {subject.intake && (
+                  <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium mt-1">
+                    Intake {subject.intake}
+                  </p>
+                )}
+              </Link>
+              {canManage && (
+                <button
+                  onClick={() => setDeleteSubject(subject)}
+                  className="absolute top-0 right-0 p-2 rounded-full transition-colors text-neutral-300 hover:text-red-500 hover:bg-red-100 cursor-pointer"
+                  title={`Delete ${subject.title}`}
+                  aria-label={`Delete ${subject.title}`}
+                >
+                  <Trash2 size={18} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canManage && (
+        <div className="mt-12 md:mt-16">
+          <button
+            onClick={() => setAddOpen(true)}
+            className="group flex items-center gap-4 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+          >
+            <Plus size={18} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform" />
+            <span className="font-serif text-2xl md:text-3xl font-bold">
+              Add Subject
+            </span>
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {addOpen && (
@@ -157,6 +198,7 @@ function AddSubjectModal({
 }) {
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
+  const [intake, setIntake] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -174,6 +216,7 @@ function AddSubjectModal({
           semesterId,
           title: title.trim(),
           code: code.trim() || undefined,
+          intake: intake.trim() || undefined,
         }),
       });
       if (!res.ok) {
@@ -243,6 +286,23 @@ function AddSubjectModal({
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="e.g. CSC 2953"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="subject-intake"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+          >
+            Intake <span className="normal-case text-neutral-400">(optional, e.g. 2025)</span>
+          </label>
+          <input
+            id="subject-intake"
+            type="text"
+            value={intake}
+            onChange={(e) => setIntake(e.target.value)}
+            placeholder="e.g. 2025"
             className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
           />
         </div>

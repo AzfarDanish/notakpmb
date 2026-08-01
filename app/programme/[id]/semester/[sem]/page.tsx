@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getProgramme, getProgrammeSemester } from '@/lib/data';
-import { getSubjectsForSemester } from '@/lib/subjects';
+import { getIntakeOptions, getSubjectsForSemester } from '@/lib/subjects';
 import { isR2Configured } from '@/lib/r2';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { SubjectList } from '@/components/SubjectList';
@@ -19,6 +19,7 @@ export default async function SemesterPage({
   }
 
   const subjects = await getSubjectsForSemester(id, sem);
+  const intakeOptions = await getIntakeOptions(id);
 
   return (
     <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">
@@ -42,6 +43,7 @@ export default async function SemesterPage({
         semesterId={sem}
         semesterTitle={semester.title}
         canManage={isR2Configured()}
+        intakeOptions={intakeOptions}
       />
     </main>
   );

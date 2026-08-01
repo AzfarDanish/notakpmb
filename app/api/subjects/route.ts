@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { programmeId, semesterId, title, code } = (body ?? {}) as Record<string, unknown>;
+  const { programmeId, semesterId, title, code, intake } = (body ?? {}) as Record<string, unknown>;
   if (
     typeof programmeId !== 'string' ||
     typeof semesterId !== 'string' ||
@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+  if (intake !== undefined && (typeof intake !== 'string' || intake.trim().length > 60)) {
+    return NextResponse.json({ error: 'intake must be a short string' }, { status: 400 });
+  }
 
   try {
     const subject = await addSubject({
@@ -32,6 +35,7 @@ export async function POST(request: NextRequest) {
       semesterId,
       title,
       code: typeof code === 'string' ? code : undefined,
+      intake: typeof intake === 'string' ? intake : undefined,
     });
     return NextResponse.json({ subject });
   } catch (e) {
