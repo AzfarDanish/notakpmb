@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
 import type { Subject } from '@/lib/data';
@@ -243,6 +243,7 @@ function AddSubjectModal({
   const [intake, setIntake] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -265,7 +266,8 @@ function AddSubjectModal({
         setError(data?.error || 'Failed to add subject');
         return;
       }
-      onAdded();
+      setSuccess(true);
+      setTimeout(onAdded, 1200);
     } catch (err) {
       console.error('Add subject error:', err);
       setError('Failed to add subject');
@@ -275,7 +277,7 @@ function AddSubjectModal({
   };
 
   return (
-    <ModalCard onClose={onClose} disableClose={isSubmitting}>
+    <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="font-serif text-2xl font-bold text-neutral-900">
@@ -284,7 +286,7 @@ function AddSubjectModal({
         </div>
         <button
           onClick={onClose}
-          disabled={isSubmitting}
+          disabled={isSubmitting || success}
           className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
           aria-label="Close"
         >
@@ -304,10 +306,11 @@ function AddSubjectModal({
             id="subject-title"
             type="text"
             value={title}
+            disabled={success}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Machine Learning"
             autoFocus
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
@@ -322,9 +325,10 @@ function AddSubjectModal({
             id="subject-code"
             type="text"
             value={code}
+            disabled={success}
             onChange={(e) => setCode(e.target.value)}
             placeholder="e.g. CSC 2953"
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
@@ -339,30 +343,34 @@ function AddSubjectModal({
             id="subject-intake"
             type="text"
             value={intake}
+            disabled={success}
             onChange={(e) => setIntake(e.target.value)}
             placeholder="e.g. 2025"
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
+        {success && <p className="text-sm text-green-600">Subject added successfully.</p>}
 
         <div className="flex items-center justify-end gap-4 mt-2">
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting}
+            disabled={isSubmitting || success}
             className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
           >
             CANCEL
           </button>
           <button
             type="submit"
-            disabled={!title.trim() || isSubmitting}
+            disabled={!title.trim() || isSubmitting || success}
             className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <><Loader2 size={14} className="animate-spin" /> ADDING...</>
+            ) : success ? (
+              <><Check size={14} /> ADDED</>
             ) : (
               'ADD SUBJECT'
             )}
@@ -385,6 +393,7 @@ function DeleteSubjectModal({
   const [typed, setTyped] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const matches = typed === subject.title;
 
@@ -401,7 +410,8 @@ function DeleteSubjectModal({
         setError(data?.error || 'Failed to delete subject');
         return;
       }
-      onDeleted();
+      setSuccess(true);
+      setTimeout(onDeleted, 1200);
     } catch (err) {
       console.error('Delete subject error:', err);
       setError('Failed to delete subject');
@@ -411,7 +421,7 @@ function DeleteSubjectModal({
   };
 
   return (
-    <ModalCard onClose={onClose} disableClose={isDeleting}>
+    <ModalCard onClose={onClose} disableClose={isDeleting || success}>
       <h3 className="font-serif text-2xl font-bold mb-2 text-neutral-900">
         Delete Subject
       </h3>
@@ -434,29 +444,33 @@ function DeleteSubjectModal({
         id="delete-subject-confirm"
         type="text"
         value={typed}
+        disabled={success}
         onChange={(e) => setTyped(e.target.value)}
         placeholder={subject.title}
         autoFocus
-        className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors"
+        className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
       />
 
       {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+      {success && <p className="text-sm text-green-600 mt-3">Subject deleted successfully.</p>}
 
       <div className="flex items-center justify-end gap-4 mt-6">
         <button
           onClick={onClose}
-          disabled={isDeleting}
+          disabled={isDeleting || success}
           className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
         >
           CANCEL
         </button>
         <button
           onClick={handleDelete}
-          disabled={!matches || isDeleting}
+          disabled={!matches || isDeleting || success}
           className="px-6 py-3 bg-red-500 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
         >
           {isDeleting ? (
             <><Loader2 size={14} className="animate-spin" /> DELETING...</>
+          ) : success ? (
+            <><Check size={14} /> DELETED</>
           ) : (
             'DELETE SUBJECT'
           )}
@@ -479,6 +493,7 @@ function RenameSubjectModal({
   const [code, setCode] = useState(subject.code);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -499,7 +514,8 @@ function RenameSubjectModal({
         setError(data?.error || 'Failed to rename subject');
         return;
       }
-      onRenamed();
+      setSuccess(true);
+      setTimeout(onRenamed, 1200);
     } catch (err) {
       console.error('Rename subject error:', err);
       setError('Failed to rename subject');
@@ -509,14 +525,14 @@ function RenameSubjectModal({
   };
 
   return (
-    <ModalCard onClose={onClose} disableClose={isSubmitting}>
+    <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
       <div className="flex items-start justify-between mb-6">
         <h3 className="font-serif text-2xl font-bold text-neutral-900">
           Rename Subject
         </h3>
         <button
           onClick={onClose}
-          disabled={isSubmitting}
+          disabled={isSubmitting || success}
           className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
           aria-label="Close"
         >
@@ -536,10 +552,11 @@ function RenameSubjectModal({
             id="rename-subject-title"
             type="text"
             value={title}
+            disabled={success}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={subject.title}
             autoFocus
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
@@ -554,30 +571,34 @@ function RenameSubjectModal({
             id="rename-subject-code"
             type="text"
             value={code}
+            disabled={success}
             onChange={(e) => setCode(e.target.value)}
             placeholder={subject.code}
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
+        {success && <p className="text-sm text-green-600">Subject renamed successfully.</p>}
 
         <div className="flex items-center justify-end gap-4 mt-2">
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting}
+            disabled={isSubmitting || success}
             className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
           >
             CANCEL
           </button>
           <button
             type="submit"
-            disabled={!title.trim() || isSubmitting}
+            disabled={!title.trim() || isSubmitting || success}
             className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <><Loader2 size={14} className="animate-spin" /> RENAMING...</>
+            ) : success ? (
+              <><Check size={14} /> RENAMED</>
             ) : (
               'RENAME SUBJECT'
             )}

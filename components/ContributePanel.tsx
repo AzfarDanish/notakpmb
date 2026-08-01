@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { X, ArrowUp, Loader2, FileText } from 'lucide-react';
+import { X, ArrowUp, Loader2, FileText, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useScrollLock } from '@/hooks/useScrollLock';
@@ -12,6 +12,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPublished, setIsPublished] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -21,6 +22,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
     if (!file || !title.trim() || !subjectId) return;
     
     setIsUploading(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -34,10 +36,14 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
       });
 
       if (res.ok) {
-        setIsOpen(false);
-        setTitle('');
-        setFile(null);
-        router.refresh(); // Refresh the page to show new document
+        setIsPublished(true);
+        setTimeout(() => {
+          setIsOpen(false);
+          setTitle('');
+          setFile(null);
+          setIsPublished(false);
+          router.refresh();
+        }, 1200);
       } else {
         let errorMessage = 'Upload failed. Is R2 configured?';
         try {
@@ -51,11 +57,11 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
         } catch (e) {
           console.error('Failed to parse error response', e);
         }
-        alert(errorMessage);
+        setError(errorMessage);
       }
     } catch (error) {
       console.error(error);
-      alert('Upload failed');
+      setError('Upload failed');
     } finally {
       setIsUploading(false);
     }
@@ -77,7 +83,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
+              onClick={() => !isPublished && setIsOpen(false)}
               className="fixed inset-0 bg-white/40 backdrop-blur-sm z-40"
             />
             <motion.div 
@@ -94,7 +100,8 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                   </span>
                   <button 
                     onClick={() => setIsOpen(false)}
-                    className="text-neutral-400 hover:text-neutral-900 transition-colors"
+                    disabled={isPublished}
+                    className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50"
                   >
                     <X size={20} strokeWidth={1.5} />
                   </button>
@@ -105,12 +112,13 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                     type="text" 
                     placeholder="Document Title..." 
                     value={title}
+                    disabled={isPublished}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none font-serif text-4xl md:text-5xl italic placeholder:text-neutral-300 text-neutral-900"
+                    className="w-full bg-transparent border-none outline-none font-serif text-4xl md:text-5xl italic placeholder:text-neutral-300 text-neutral-900 disabled:opacity-50"
                   />
 
                   <div 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => !isPublished && fileInputRef.current?.click()}
                     className={`border border-dashed ${error ? 'border-red-400 bg-red-50/50' : 'border-neutral-300 hover:bg-neutral-50/50'} rounded-sm p-8 md:p-12 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-colors mt-4 relative`}
                   >
                     <input 
@@ -172,16 +180,27 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                   {error && (
                     <p className="text-red-500 text-xs text-center">{error}</p>
                   )}
+                  {isPublished && (
+                    <p className="text-green-600 text-xs text-center">
+                      Document published successfully.
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="p-6 md:p-12 border-t border-neutral-200/50">
                 <button 
                   onClick={handlePublish}
-                  disabled={!file || !title.trim() || isUploading}
+                  disabled={!file || !title.trim() || isUploading || isPublished}
                   className="w-full bg-ink text-white py-5 text-[10px] tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isUploading ? <><Loader2 size={14} className="animate-spin" /> PUBLISHING...</> : 'PUBLISH'}
+                  {isUploading ? (
+                    <><Loader2 size={14} className="animate-spin" /> PUBLISHING...</>
+                  ) : isPublished ? (
+                    <><Check size={14} /> PUBLISHED</>
+                  ) : (
+                    'PUBLISH'
+                  )}
                 </button>
               </div>
             </motion.div>

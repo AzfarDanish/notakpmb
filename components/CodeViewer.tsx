@@ -44,7 +44,6 @@ export function CodeViewer({ url }: { url: string }) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 min-h-0 text-center p-8 text-neutral-500">
         <p className="mb-2">Unable to preview this file.</p>
-        <p className="text-xs">Please use the download button instead.</p>
       </div>
     );
   }

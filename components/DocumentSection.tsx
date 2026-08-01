@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Trash2, Loader2, Eye, Download } from 'lucide-react';
+import { X, Trash2, Loader2, Eye, Download, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { MoreMenu } from '@/components/MoreMenu';
@@ -13,10 +13,39 @@ import { useScrollLock } from '@/hooks/useScrollLock';
 import { getFileKind, type FileKind } from '@/lib/fileKinds';
 import type { R2Document } from '@/lib/r2';
 
+function NativePreview({ url }: { url: string }) {
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  return (
+    <div className="relative w-full h-full">
+      <iframe
+        src={url}
+        className="absolute inset-0 w-full h-full border-none"
+        title="Document Preview"
+        onLoad={() => setStatus('ready')}
+        onError={() => setStatus('error')}
+      />
+      {status === 'loading' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-neutral-400 pointer-events-none z-10">
+          <Loader2 size={20} className="animate-spin" />
+          <p className="text-sm">Loading preview&hellip;</p>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="absolute inset-0 flex items-center justify-center text-center p-8 text-neutral-500">
+          <p className="mb-2">Unable to load this preview.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DocumentSection({ title, items, scrollable = false }: { title: string, items: R2Document[], scrollable?: boolean }) {
   const [previewItem, setPreviewItem] = useState<{url: string, title: string, downloadUrl: string, kind: FileKind} | null>(null);
   const [deleteItem, setDeleteItem] = useState<{key: string, title: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
   const router = useRouter();
 
   useScrollLock(Boolean(previewItem));
@@ -26,19 +55,24 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
   const handleDelete = async () => {
     if (!deleteItem) return;
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/delete?key=${encodeURIComponent(deleteItem.key)}`, {
         method: 'DELETE',
       });
       if (res.ok) {
-        setDeleteItem(null);
-        router.refresh();
+        setDeleteSuccess(true);
+        setTimeout(() => {
+          setDeleteItem(null);
+          router.refresh();
+        }, 1200);
       } else {
-        alert('Failed to delete file');
+        const data = await res.json().catch(() => null);
+        setDeleteError(data?.error || 'Failed to delete file');
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete file');
+      setDeleteError('Failed to delete file');
     } finally {
       setIsDeleting(false);
     }
@@ -166,7 +200,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                   </div>
                 </div>
 
-                <div className={`flex-1 bg-white rounded-sm border border-neutral-200 overflow-hidden relative shadow-inner ${previewItem.kind === 'native' ? 'flex items-center justify-center' : 'flex flex-col'}`}>
+                <div className={`flex-1 bg-white rounded-sm border border-neutral-200 overflow-hidden relative shadow-inner ${previewItem.kind === 'native' ? '' : 'flex flex-col'}`}>
                   {previewItem.kind === 'docx' && (
                     <DocxPreview url={previewItem.url} title={previewItem.title} />
                   )}
@@ -178,18 +212,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                     <ImageViewer url={previewItem.url} title={previewItem.title} />
                   )}
                   {previewItem.kind === 'native' && (
-                    <>
-                      <iframe 
-                        src={previewItem.url} 
-                        className="w-full h-full border-none absolute inset-0"
-                        title="Document Preview"
-                      />
-                      <div className="text-center p-8 text-neutral-500 pointer-events-none z-0">
-                        <p className="mb-2">If the preview doesn&apos;t load automatically,</p>
-                        <p>this file type might not be supported by your browser.</p>
-                        <p className="mt-4 text-xs">Please use the download button instead.</p>
-                      </div>
-                    </>
+                    <NativePreview key={previewItem.url} url={previewItem.url} />
                   )}
                 </div>
               </div>
@@ -205,7 +228,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => !isDeleting && setDeleteItem(null)}
+              onClick={() => !isDeleting && !deleteSuccess && setDeleteItem(null)}
               className="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             >
               <motion.div 
@@ -219,21 +242,28 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 <p className="text-neutral-500 text-sm mb-8">
                   Are you sure you want to delete <span className="font-medium text-neutral-900">&quot;{deleteItem.title}&quot;</span>? This action cannot be undone.
                 </p>
-                
+
+                {deleteError && (
+                  <p className="text-sm text-red-500 -mt-4 mb-4">{deleteError}</p>
+                )}
+                {deleteSuccess && (
+                  <p className="text-sm text-green-600 -mt-4 mb-4">Document deleted successfully.</p>
+                )}
+
                 <div className="flex items-center justify-end gap-4">
                   <button 
                     onClick={() => setDeleteItem(null)}
-                    disabled={isDeleting}
+                    disabled={isDeleting || deleteSuccess}
                     className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
                   >
                     CANCEL
                   </button>
                   <button 
                     onClick={handleDelete}
-                    disabled={isDeleting}
+                    disabled={isDeleting || deleteSuccess}
                     className="px-6 py-3 bg-red-500 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
                   >
-                    {isDeleting ? <><Loader2 size={14} className="animate-spin" /> DELETING...</> : 'DELETE'}
+                    {isDeleting ? <><Loader2 size={14} className="animate-spin" /> DELETING...</> : deleteSuccess ? <><Check size={14} /> DELETED</> : 'DELETE'}
                   </button>
                 </div>
               </motion.div>
