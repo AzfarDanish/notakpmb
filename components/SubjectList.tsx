@@ -29,11 +29,11 @@ export function SubjectList({
     <>
       {subjects.length === 0 && (
         <EmptyState
-          title={`No subjects published for ${programmeTitle} yet`}
+          title={`No subjects yet for ${programmeTitle}`}
           hint={
             canManage
-              ? 'Add the first subject below.'
-              : 'Subjects will appear here once they are added.'
+              ? 'Every shelf begins with one subject. Add the first and start the collection — someone out there is waiting for it.'
+              : 'No subjects here yet. Check back soon — or be the one to start the shelf.'
           }
         />
       )}
@@ -202,7 +202,7 @@ function AddSubjectModal({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!title.trim() || isSubmitting) return;
+    if (!title.trim() || !code.trim() || isSubmitting) return;
     setIsSubmitting(true);
     setError('');
     try {
@@ -212,7 +212,7 @@ function AddSubjectModal({
         body: JSON.stringify({
           programmeId,
           title: title.trim(),
-          code: code.trim() || undefined,
+          code: code.trim(),
         }),
       });
       if (!res.ok) {
@@ -273,7 +273,7 @@ function AddSubjectModal({
             htmlFor="subject-code"
             className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
           >
-            Course code <span className="normal-case text-neutral-400">(optional)</span>
+            Course code
           </label>
           <input
             id="subject-code"
@@ -300,7 +300,7 @@ function AddSubjectModal({
           </button>
           <button
             type="submit"
-            disabled={!title.trim() || isSubmitting || success}
+            disabled={!title.trim() || !code.trim() || isSubmitting || success}
             className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
@@ -433,7 +433,7 @@ function RenameSubjectModal({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!title.trim() || isSubmitting) return;
+    if (!title.trim() || !code.trim() || isSubmitting) return;
     setIsSubmitting(true);
     setError('');
     try {
@@ -442,7 +442,7 @@ function RenameSubjectModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
-          code: code.trim() || undefined,
+          code: code.trim(),
         }),
       });
       if (!res.ok) {
@@ -501,7 +501,7 @@ function RenameSubjectModal({
             htmlFor="rename-subject-code"
             className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
           >
-            Course code <span className="normal-case text-neutral-400">(optional)</span>
+            Course code
           </label>
           <input
             id="rename-subject-code"
@@ -528,7 +528,7 @@ function RenameSubjectModal({
           </button>
           <button
             type="submit"
-            disabled={!title.trim() || isSubmitting || success}
+            disabled={!title.trim() || !code.trim() || isSubmitting || success}
             className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (

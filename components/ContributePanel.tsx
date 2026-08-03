@@ -13,10 +13,33 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useScrollLock(isOpen);
+
+  const validateFile = (selectedFile: File): string | null => {
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      return 'File size exceeds the 5MB limit.';
+    }
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    if (!allowedTypes.includes(selectedFile.type) && !selectedFile.name.match(/\.(pdf|doc|docx|txt)$/i)) {
+      return 'Invalid file type. Please upload a PDF, DOC, DOCX, or TXT file.';
+    }
+    return null;
+  };
+
+  const handleFile = (selectedFile: File) => {
+    const validationError = validateFile(selectedFile);
+    if (validationError) {
+      setError(validationError);
+      setFile(null);
+      return;
+    }
+    setError(null);
+    setFile(selectedFile);
+  };
 
   const handlePublish = async () => {
     if (!file || !title.trim() || !subjectId) return;
@@ -110,7 +133,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                 <div className="flex flex-col gap-12">
                   <input 
                     type="text" 
-                    placeholder="Document Title..." 
+                    placeholder="Your note needs a title..." 
                     value={title}
                     disabled={isPublished}
                     onChange={(e) => setTitle(e.target.value)}
@@ -119,7 +142,31 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
 
                   <div 
                     onClick={() => !isPublished && fileInputRef.current?.click()}
-                    className={`border border-dashed ${error ? 'border-red-400 bg-red-50/50' : 'border-neutral-300 hover:bg-neutral-50/50'} rounded-sm p-8 md:p-12 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-colors mt-4 relative`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (!isPublished) fileInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (!isPublished) setIsDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setIsDragging(false);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      if (isPublished) return;
+                      const droppedFile = e.dataTransfer.files?.[0];
+                      if (droppedFile) handleFile(droppedFile);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className={`border border-dashed ${isDragging ? 'border-neutral-900 bg-neutral-50/50' : error ? 'border-red-400 bg-red-50/50' : 'border-neutral-300 hover:bg-neutral-50/50'} rounded-sm p-8 md:p-12 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-colors mt-4 relative`}
                   >
                     <input 
                       type="file" 
@@ -131,22 +178,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                           setError(null);
                           return;
                         }
-                        
-                        if (selectedFile.size > 5 * 1024 * 1024) {
-                          setError('File size exceeds the 5MB limit.');
-                          setFile(null);
-                          return;
-                        }
-                        
-                        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-                        if (!allowedTypes.includes(selectedFile.type) && !selectedFile.name.match(/\.(pdf|doc|docx|txt)$/i)) {
-                          setError('Invalid file type. Please upload a PDF, DOC, DOCX, or TXT file.');
-                          setFile(null);
-                          return;
-                        }
-
-                        setError(null);
-                        setFile(selectedFile);
+                        handleFile(selectedFile);
                       }}
                       className="hidden" 
                       accept=".pdf,.doc,.docx,.txt"
@@ -169,7 +201,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                           <ArrowUp size={14} strokeWidth={3} className="text-white" />
                         </div>
                         <p className="font-serif text-neutral-600">
-                          Drag document here or browse.
+                          {isDragging ? 'Drop to select.' : 'Drag document here or browse.'}
                         </p>
                         <p className="text-[10px] tracking-widest text-neutral-400 uppercase">
                           PDF, DOC, DOCX, TXT up to 5MB
@@ -182,7 +214,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                   )}
                   {isPublished && (
                     <p className="text-green-600 text-xs text-center">
-                      Document published successfully.
+                      Contributed! The archive just grew — thank you for sharing.
                     </p>
                   )}
                 </div>
@@ -195,11 +227,11 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                   className="w-full bg-ink text-white py-5 text-[10px] tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
-                    <><Loader2 size={14} className="animate-spin" /> PUBLISHING...</>
+                    <><Loader2 size={14} className="animate-spin" /> CONTRIBUTING...</>
                   ) : isPublished ? (
-                    <><Check size={14} /> PUBLISHED</>
+                    <><Check size={14} /> CONTRIBUTED</>
                   ) : (
-                    'PUBLISH'
+                    'CONTRIBUTE TO THE ARCHIVE'
                   )}
                 </button>
               </div>

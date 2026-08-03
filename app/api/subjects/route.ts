@@ -18,26 +18,24 @@ export async function POST(request: NextRequest) {
   const { programmeId, title, code } = (body ?? {}) as Record<string, unknown>;
   if (
     typeof programmeId !== 'string' ||
-    typeof title !== 'string'
+    typeof title !== 'string' ||
+    typeof code !== 'string'
   ) {
     return NextResponse.json(
-      { error: 'programmeId and title are required' },
+      { error: 'programmeId, title and code are required' },
       { status: 400 },
     );
   }
 
   try {
-    const subject = await addSubject({
-      programmeId,
-      title,
-      code: typeof code === 'string' ? code : undefined,
-    });
+    const subject = await addSubject({ programmeId, title, code });
     return NextResponse.json({ subject });
   } catch (e) {
     if (
       e instanceof Error &&
       (e.message === 'Unknown programme' ||
-        e.message === 'Subject title is required')
+        e.message === 'Subject title is required' ||
+        e.message === 'Course code is required')
     ) {
       return NextResponse.json({ error: e.message }, { status: 400 });
     }
@@ -64,22 +62,21 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { title, code } = (body ?? {}) as Record<string, unknown>;
-  if (typeof title !== 'string') {
-    return NextResponse.json({ error: 'title is required' }, { status: 400 });
-  }
-  if (code !== undefined && typeof code !== 'string') {
-    return NextResponse.json({ error: 'code must be a string' }, { status: 400 });
+  if (typeof title !== 'string' || typeof code !== 'string') {
+    return NextResponse.json(
+      { error: 'title and code are required' },
+      { status: 400 },
+    );
   }
 
   try {
-    const subject = await renameSubject({
-      id,
-      title,
-      code: typeof code === 'string' ? code : undefined,
-    });
+    const subject = await renameSubject({ id, title, code });
     return NextResponse.json({ subject });
   } catch (e) {
     if (e instanceof Error && e.message === 'Subject title is required') {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+    if (e instanceof Error && e.message === 'Course code is required') {
       return NextResponse.json({ error: e.message }, { status: 400 });
     }
     if (e instanceof Error && e.message === 'Subject not found') {

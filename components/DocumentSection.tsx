@@ -86,10 +86,10 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
       {isEmpty && (
         <div className="border border-dashed border-neutral-300 rounded-sm p-8 text-center">
           <p className="font-serif text-lg text-neutral-500">
-            No {title.toLowerCase()} yet
+            Nothing here yet
           </p>
           <p className="text-xs text-neutral-400 mt-2">
-            Be the first to contribute.
+            Every archive begins with one contribution. Be the first — the note you share might save a classmate.
           </p>
         </div>
       )}

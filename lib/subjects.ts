@@ -194,15 +194,17 @@ export async function getSubjectWithCustom(
 export async function addSubject(input: {
   programmeId: string
   title: string
-  code?: string
+  code: string
 }): Promise<ManagedSubject> {
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
+  const code = input.code.trim();
+  if (!code) throw new Error('Course code is required');
 
   const subject: ManagedSubject = {
     id: `${slugify(title)}-${Date.now().toString(36)}`,
     title,
-    code: (input.code ?? '').trim(),
+    code,
     programmeId: input.programmeId,
   };
 
@@ -222,13 +224,13 @@ export async function addSubject(input: {
 export async function renameSubject(input: {
   id: string
   title: string
-  code?: string
+  code: string
 }): Promise<Subject> {
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
+  const code = input.code.trim();
+  if (!code) throw new Error('Course code is required');
 
-  const code = input.code?.trim();
-  const codeClean = code === undefined ? undefined : code;
   const rows = await loadDeltas();
   const { customSubjects, deletedIds } = partitionRows(rows);
 
@@ -236,31 +238,22 @@ export async function renameSubject(input: {
   if (custom) {
     await queryD1(
       `UPDATE subjects SET title = ?, code = ? WHERE id = ? AND kind = 'custom'`,
-      [title, codeClean ?? custom.code ?? '', input.id],
+      [title, code, input.id],
     );
-    return { id: input.id, title, code: codeClean ?? custom.code ?? '' };
+    return { id: input.id, title, code };
   }
 
   if (deletedIds.has(input.id)) throw new Error('Subject not found');
   const staticContext = getStaticSubject(input.id);
   if (!staticContext) throw new Error('Subject not found');
 
-  if (codeClean !== undefined) {
-    await queryD1(
-      `INSERT INTO subjects (id, subject_id, kind, title, code)
-       VALUES (?, ?, 'rename', ?, ?)
-       ON CONFLICT(id) DO UPDATE SET title = excluded.title, code = excluded.code`,
-      [kindId('rename', input.id), input.id, title, codeClean],
-    );
-  } else {
-    await queryD1(
-      `INSERT INTO subjects (id, subject_id, kind, title)
-       VALUES (?, ?, 'rename', ?)
-       ON CONFLICT(id) DO UPDATE SET title = excluded.title`,
-      [kindId('rename', input.id), input.id, title],
-    );
-  }
-  return { id: input.id, title, code: codeClean ?? staticContext.subject.code };
+  await queryD1(
+    `INSERT INTO subjects (id, subject_id, kind, title, code)
+     VALUES (?, ?, 'rename', ?, ?)
+     ON CONFLICT(id) DO UPDATE SET title = excluded.title, code = excluded.code`,
+    [kindId('rename', input.id), input.id, title, code],
+  );
+  return { id: input.id, title, code };
 }
 
 export async function deleteSubject(id: string): Promise<{ deletedFiles: number }> {

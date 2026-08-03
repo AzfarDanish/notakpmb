@@ -46,7 +46,8 @@ export default async function SearchPage({
         {!query && (
           <p className="text-sm text-neutral-500">
             Search by subject title, course code, or file name — for
-            example &ldquo;database&rdquo; or &ldquo;CSC 1413&rdquo;.
+            example &ldquo;database&rdquo; or &ldquo;CSC 1413&rdquo;. Can&rsquo;t find
+            a topic? Be the first to contribute it.
           </p>
         )}
 
@@ -56,7 +57,7 @@ export default async function SearchPage({
           files.length === 0 && (
           <EmptyState
             title={`No results for "${query}"`}
-            hint="Try a different name or course code."
+            hint="It might not exist yet. You could be the one to start it."
           />
         )}
 
