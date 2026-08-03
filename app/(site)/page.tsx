@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getAllFileCounts } from '@/lib/r2';
-import { getProgrammes } from '@/lib/data';
+import { getProgrammes } from '@/lib/subjects';
 
 const programmeMargins = [
   'ml-0 md:ml-12',
@@ -12,7 +12,7 @@ const programmeMargins = [
 ];
 
 export default async function Home() {
-  const programmes = getProgrammes();
+  const programmes = await getProgrammes();
   const fileCounts = await getAllFileCounts();
 
   return (
@@ -22,7 +22,7 @@ export default async function Home() {
           Nota<br />KPMB
         </h1>
         <p className="text-neutral-700 max-w-[280px] leading-relaxed text-sm mb-8">
-          A curated digital repository of Computer Science notes, exercises, and past year questions — for KPMB students. Preserving the pursuit of knowledge.
+          A curated digital repository of notes, exercises, and past year questions for KPMB students. Preserving the pursuit of knowledge.
         </p>
       </div>
 
@@ -32,6 +32,7 @@ export default async function Home() {
             (acc, subject) => acc + (fileCounts[subject.id] || 0),
             0,
           );
+          const totalSubjects = programme.subjects.length;
 
           return (
             <Link
@@ -43,7 +44,8 @@ export default async function Home() {
                 {programme.code}
               </h2>
               <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
-                {totalFiles} FILES
+                {totalFiles} FILES <span className="mx-2">&middot;</span>{' '}
+                {totalSubjects} SUBJECTS
               </p>
             </Link>
           );

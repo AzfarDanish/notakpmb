@@ -14,51 +14,19 @@ export function SubjectList({
   programmeId,
   programmeTitle,
   canManage,
-  intakeOptions,
 }: {
-  subjects: (Subject & { intake?: string })[]
+  subjects: Subject[]
   programmeId: string
   programmeTitle: string
   canManage: boolean
-  intakeOptions: string[]
 }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
   const [renameSubject, setRenameSubject] = useState<Subject | null>(null);
-  const [selectedIntake, setSelectedIntake] = useState('ALL');
-
-  const visibleSubjects = subjects.filter(
-    (s) => selectedIntake === 'ALL' || !s.intake || s.intake === selectedIntake,
-  );
-  const hasFilteredOut = visibleSubjects.length === 0 && subjects.length > 0;
 
   return (
     <>
-      {intakeOptions.length > 0 && (
-        <div className="mb-10 md:mb-14">
-          <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium mb-3">
-            Intake
-          </p>
-          <div role="group" aria-label="Filter by intake" className="flex flex-wrap gap-2">
-            {['ALL', ...intakeOptions].map((intake) => (
-              <button
-                key={intake}
-                onClick={() => setSelectedIntake(intake)}
-                aria-pressed={selectedIntake === intake}
-                className={`rounded-full px-4 py-2 text-[10px] tracking-widest uppercase font-medium transition-colors cursor-pointer ${
-                  selectedIntake === intake
-                    ? 'bg-ink text-paper'
-                    : 'border border-neutral-300 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900'
-                }`}
-              >
-                {intake}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {subjects.length === 0 && (
         <EmptyState
           title={`No subjects published for ${programmeTitle} yet`}
@@ -70,19 +38,12 @@ export function SubjectList({
         />
       )}
 
-      {hasFilteredOut && (
-        <EmptyState
-          title={`No subjects for ${selectedIntake} yet`}
-          hint="Try a different intake or view all subjects."
-        />
-      )}
-
-      {visibleSubjects.length > 0 && (
+      {subjects.length > 0 && (
         <div className="flex flex-col">
           {Array.from(
-            { length: Math.ceil(visibleSubjects.length / 3) },
+            { length: Math.ceil(subjects.length / 3) },
             (_, rowIndex) => {
-              const row = visibleSubjects.slice(rowIndex * 3, rowIndex * 3 + 3);
+              const row = subjects.slice(rowIndex * 3, rowIndex * 3 + 3);
               return (
                 <div
                   key={rowIndex}
@@ -104,11 +65,6 @@ export function SubjectList({
                         <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
                           {subject.title}
                         </h3>
-                        {subject.intake && (
-                          <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium mt-1">
-                            Intake {subject.intake}
-                          </p>
-                        )}
                       </Link>
                       {canManage && (
                         <div className="absolute top-0 right-0">
@@ -240,7 +196,6 @@ function AddSubjectModal({
 }) {
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
-  const [intake, setIntake] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -258,7 +213,6 @@ function AddSubjectModal({
           programmeId,
           title: title.trim(),
           code: code.trim() || undefined,
-          intake: intake.trim() || undefined,
         }),
       });
       if (!res.ok) {
@@ -328,24 +282,6 @@ function AddSubjectModal({
             disabled={success}
             onChange={(e) => setCode(e.target.value)}
             placeholder="e.g. CSC 2953"
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="subject-intake"
-            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
-          >
-            Intake <span className="normal-case text-neutral-400">(optional, e.g. 2025)</span>
-          </label>
-          <input
-            id="subject-intake"
-            type="text"
-            value={intake}
-            disabled={success}
-            onChange={(e) => setIntake(e.target.value)}
-            placeholder="e.g. 2025"
             className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>

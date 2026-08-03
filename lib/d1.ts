@@ -6,6 +6,16 @@ export function isD1Configured(): boolean {
   );
 }
 
+export async function d1Or<T>(run: () => Promise<T>, fallback: T): Promise<T> {
+  if (!isD1Configured()) return fallback;
+  try {
+    return await run();
+  } catch (e) {
+    console.warn('Failed to read D1, using fallback:', e);
+    return fallback;
+  }
+}
+
 export type D1QueryResult = {
   success: boolean
   results: Record<string, unknown>[]

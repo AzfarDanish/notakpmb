@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getAllFileCounts, isR2Configured } from '@/lib/r2';
-import { getProgramme } from '@/lib/data';
-import { getIntakeOptions, getSubjectsForProgramme } from '@/lib/subjects';
+import { getProgramme, getSubjectsForProgramme } from '@/lib/subjects';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { SearchInput } from '@/components/SearchInput';
 import { SubjectList } from '@/components/SubjectList';
@@ -12,7 +11,7 @@ export default async function ProgrammePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params;
-  const programme = getProgramme(id);
+  const programme = await getProgramme(id);
 
   if (!programme) {
     notFound();
@@ -26,7 +25,6 @@ export default async function ProgrammePage({
   const totalSubjects = programme.subjects.length;
 
   const subjects = await getSubjectsForProgramme(id);
-  const intakeOptions = await getIntakeOptions(id);
 
   return (
     <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">
@@ -63,7 +61,6 @@ export default async function ProgrammePage({
         programmeId={id}
         programmeTitle={programme.title}
         canManage={isR2Configured()}
-        intakeOptions={intakeOptions}
       />
     </main>
   );
