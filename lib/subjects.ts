@@ -1,10 +1,9 @@
 import {
   DeleteObjectsCommand,
-  GetObjectCommand,
   ListObjectsV2Command,
-  PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getR2Client } from '@/lib/r2';
+import { queryD1 } from '@/lib/d1';
 import {
   getProgramme,
   getSubject,
@@ -29,68 +28,82 @@ type SubjectRename = {
   code?: string
 }
 
-type Manifest = {
-  subjects: ManagedSubject[]
-  deletedSubjectIds: string[]
-  intakeExclusions: IntakeExclusion[]
-  subjectRenames: SubjectRename[]
+type SubjectKind = 'custom' | 'rename' | 'deletion' | 'exclusion'
+
+type SubjectRow = {
+  id: string
+  subjectId: string
+  kind: SubjectKind
+  title: string | null
+  code: string | null
+  programmeId: string | null
+  intake: string | null
 }
 
-const MANIFEST_KEY = '_subjects.json'
-
-const EMPTY_MANIFEST: Manifest = {
-  subjects: [],
-  deletedSubjectIds: [],
-  intakeExclusions: [],
-  subjectRenames: [],
+function kindId(kind: SubjectKind, subjectId: string, intake?: string): string {
+  if (kind === 'custom') return subjectId;
+  if (kind === 'exclusion') return `${kind}:${subjectId}:${intake ?? ''}`;
+  return `${kind}:${subjectId}`;
 }
 
-async function readManifest(): Promise<Manifest> {
-  const client = getR2Client();
-  const bucket = process.env.R2_BUCKET_NAME;
-  if (!client || !bucket) return EMPTY_MANIFEST;
-
+async function listSubjectRows(): Promise<SubjectRow[]> {
   try {
-    const res = await client.send(
-      new GetObjectCommand({ Bucket: bucket, Key: MANIFEST_KEY }),
+    const res = await queryD1(
+      'SELECT id, subject_id, kind, title, code, programme_id, intake FROM subjects',
     );
-    const body = await res.Body?.transformToString();
-    if (!body) return EMPTY_MANIFEST;
-    const parsed = JSON.parse(body) as Partial<Manifest>;
-    return {
-      subjects: Array.isArray(parsed.subjects) ? parsed.subjects : [],
-      deletedSubjectIds: Array.isArray(parsed.deletedSubjectIds)
-        ? parsed.deletedSubjectIds
-        : [],
-      intakeExclusions: Array.isArray(parsed.intakeExclusions)
-        ? parsed.intakeExclusions
-        : [],
-      subjectRenames: Array.isArray(parsed.subjectRenames)
-        ? parsed.subjectRenames
-        : [],
-    };
+    return res.results.map((r) => ({
+      id: String(r.id ?? ''),
+      subjectId: String(r.subject_id ?? ''),
+      kind: String(r.kind) as SubjectKind,
+      title: r.title === null || r.title === undefined ? null : String(r.title),
+      code: r.code === null || r.code === undefined ? null : String(r.code),
+      programmeId:
+        r.programme_id === null || r.programme_id === undefined
+          ? null
+          : String(r.programme_id),
+      intake:
+        r.intake === null || r.intake === undefined ? null : String(r.intake),
+    }));
   } catch (e) {
-    const isMissing = e instanceof Error && (e as { name?: string }).name === 'NoSuchKey';
-    if (!isMissing) {
-      console.warn('Failed to read subject manifest from R2:', e);
-    }
-    return EMPTY_MANIFEST;
+    console.warn('Failed to read D1 subjects:', e);
+    return [];
   }
 }
 
-async function writeManifest(manifest: Manifest): Promise<void> {
-  const client = getR2Client();
-  const bucket = process.env.R2_BUCKET_NAME;
-  if (!client || !bucket) throw new Error('R2 not configured');
+function partitionRows(rows: SubjectRow[]): {
+  customSubjects: ManagedSubject[]
+  renames: SubjectRename[]
+  deletedIds: string[]
+  exclusions: IntakeExclusion[]
+} {
+  const customSubjects: ManagedSubject[] = []
+  const renames: SubjectRename[] = []
+  const deletedIds: string[] = []
+  const exclusions: IntakeExclusion[] = []
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: MANIFEST_KEY,
-      Body: JSON.stringify(manifest, null, 2),
-      ContentType: 'application/json',
-    }),
-  );
+  for (const row of rows) {
+    if (row.kind === 'custom' && row.programmeId) {
+      customSubjects.push({
+        id: row.subjectId,
+        title: row.title ?? '',
+        code: row.code ?? '',
+        programmeId: row.programmeId,
+        ...(row.intake ? { intake: row.intake } : {}),
+      });
+    } else if (row.kind === 'rename') {
+      renames.push({
+        subjectId: row.subjectId,
+        title: row.title ?? '',
+        ...(row.code ? { code: row.code } : {}),
+      });
+    } else if (row.kind === 'deletion') {
+      deletedIds.push(row.subjectId);
+    } else if (row.kind === 'exclusion' && row.intake) {
+      exclusions.push({ subjectId: row.subjectId, intake: row.intake });
+    }
+  }
+
+  return { customSubjects, renames, deletedIds, exclusions };
 }
 
 function slugify(title: string): string {
@@ -112,8 +125,8 @@ function applyRename<T extends Subject>(subject: T, renames: SubjectRename[]): T
 }
 
 export async function getCustomSubjects(): Promise<ManagedSubject[]> {
-  const manifest = await readManifest();
-  return manifest.subjects;
+  const { customSubjects } = partitionRows(await listSubjectRows());
+  return customSubjects;
 }
 
 export async function getSubjectsForProgramme(
@@ -123,46 +136,52 @@ export async function getSubjectsForProgramme(
   const programme = getProgramme(programmeId);
   if (!programme) return [];
 
-  const manifest = await readManifest();
-  const deleted = new Set(manifest.deletedSubjectIds);
+  const { customSubjects, renames, deletedIds, exclusions } = partitionRows(
+    await listSubjectRows(),
+  );
+  const deleted = new Set(deletedIds);
 
   const excludedForIntake = new Set(
-    manifest.intakeExclusions
-      .filter((e) => e.intake === intake && subjectBelongsToProgramme(manifest, e.subjectId, programmeId))
+    exclusions
+      .filter(
+        (e) =>
+          e.intake === intake &&
+          subjectBelongsToProgramme(customSubjects, e.subjectId, programmeId),
+      )
       .map((e) => e.subjectId),
   );
 
   const staticSubjects = programme.subjects
     .filter((s) => !deleted.has(s.id) && !(intake && excludedForIntake.has(s.id)))
-    .map((s) => applyRename(s, manifest.subjectRenames));
+    .map((s) => applyRename(s, renames));
 
-  const customSubjects = manifest.subjects
+  const custom = customSubjects
     .filter((s) => s.programmeId === programmeId)
     .filter((s) => !intake || !s.intake || s.intake === intake)
     .map((s) => ({ id: s.id, title: s.title, code: s.code, intake: s.intake }));
 
-  return [...staticSubjects, ...customSubjects];
+  return [...staticSubjects, ...custom];
 }
 
 function subjectBelongsToProgramme(
-  manifest: Manifest,
+  customSubjects: ManagedSubject[],
   subjectId: string,
   programmeId: string,
 ): boolean {
-  const custom = manifest.subjects.find((s) => s.id === subjectId);
+  const custom = customSubjects.find((s) => s.id === subjectId);
   if (custom) return custom.programmeId === programmeId;
   return getSubject(subjectId)?.programme.id === programmeId;
 }
 
 export async function getIntakeOptions(programmeId: string): Promise<string[]> {
-  const manifest = await readManifest();
+  const { customSubjects, exclusions } = partitionRows(await listSubjectRows());
   const intakes = new Set<string>();
 
-  for (const s of manifest.subjects) {
+  for (const s of customSubjects) {
     if (s.programmeId === programmeId && s.intake) intakes.add(s.intake);
   }
-  for (const e of manifest.intakeExclusions) {
-    if (subjectBelongsToProgramme(manifest, e.subjectId, programmeId)) {
+  for (const e of exclusions) {
+    if (subjectBelongsToProgramme(customSubjects, e.subjectId, programmeId)) {
       intakes.add(e.intake);
     }
   }
@@ -174,17 +193,19 @@ export async function getSubjectWithCustom(
   id: string,
 ): Promise<SubjectContext | undefined> {
   const staticContext = getSubject(id);
-  const manifest = await readManifest();
+  const { customSubjects, renames, deletedIds } = partitionRows(
+    await listSubjectRows(),
+  );
 
   if (staticContext) {
-    if (manifest.deletedSubjectIds.includes(id)) return undefined;
+    if (deletedIds.includes(id)) return undefined;
     return {
-      subject: applyRename(staticContext.subject, manifest.subjectRenames),
+      subject: applyRename(staticContext.subject, renames),
       programme: staticContext.programme,
     };
   }
 
-  const managed = manifest.subjects.find((s) => s.id === id);
+  const managed = customSubjects.find((s) => s.id === id);
   if (!managed) return undefined;
 
   const programme = getProgramme(managed.programmeId);
@@ -208,7 +229,6 @@ export async function addSubject(input: {
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
 
-  const manifest = await readManifest();
   const subject: ManagedSubject = {
     id: `${slugify(title)}-${Date.now().toString(36)}`,
     title,
@@ -219,8 +239,22 @@ export async function addSubject(input: {
   const intake = input.intake?.trim();
   if (intake) subject.intake = intake;
 
-  manifest.subjects.push(subject);
-  await writeManifest(manifest);
+  const res = await queryD1(
+    `INSERT INTO subjects (id, subject_id, kind, title, code, programme_id, intake)
+     VALUES (?, ?, 'custom', ?, ?, ?, ?)
+     ON CONFLICT(id) DO NOTHING`,
+    [
+      subject.id,
+      subject.id,
+      subject.title,
+      subject.code,
+      subject.programmeId,
+      intake ?? null,
+    ],
+  );
+  if ((res.meta.changes ?? 0) === 0) {
+    throw new Error('Subject already exists');
+  }
   return subject;
 }
 
@@ -231,34 +265,41 @@ export async function renameSubject(input: {
 }): Promise<Subject> {
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
+  const code = input.code?.trim();
+  const codeClean = code === undefined ? undefined : code;
 
-  const manifest = await readManifest();
-  const custom = manifest.subjects.find((s) => s.id === input.id);
+  const rows = await listSubjectRows();
+
+  const custom = rows.find(
+    (r) => r.kind === 'custom' && r.subjectId === input.id,
+  );
   if (custom) {
-    custom.title = title;
-    const code = input.code?.trim();
-    if (code !== undefined) custom.code = code;
-    await writeManifest(manifest);
-    return { id: custom.id, title: custom.title, code: custom.code };
+    await queryD1(
+      `UPDATE subjects SET title = ?, code = ? WHERE id = ? AND kind = 'custom'`,
+      [title, codeClean ?? custom.code ?? '', input.id],
+    );
+    return { id: input.id, title, code: codeClean ?? custom.code ?? '' };
   }
 
   const staticContext = getSubject(input.id);
   if (!staticContext) throw new Error('Subject not found');
 
-  const code = input.code?.trim();
-  const existing = manifest.subjectRenames.find((r) => r.subjectId === input.id);
-  if (existing) {
-    existing.title = title;
-    if (code !== undefined) existing.code = code;
+  if (codeClean !== undefined) {
+    await queryD1(
+      `INSERT INTO subjects (id, subject_id, kind, title, code)
+       VALUES (?, ?, 'rename', ?, ?)
+       ON CONFLICT(id) DO UPDATE SET title = excluded.title, code = excluded.code`,
+      [kindId('rename', input.id), input.id, title, codeClean],
+    );
   } else {
-    manifest.subjectRenames.push({
-      subjectId: input.id,
-      title,
-      ...(code !== undefined ? { code } : {}),
-    });
+    await queryD1(
+      `INSERT INTO subjects (id, subject_id, kind, title)
+       VALUES (?, ?, 'rename', ?)
+       ON CONFLICT(id) DO UPDATE SET title = excluded.title`,
+      [kindId('rename', input.id), input.id, title],
+    );
   }
-  await writeManifest(manifest);
-  return { id: input.id, title, code: code ?? staticContext.subject.code };
+  return { id: input.id, title, code: codeClean ?? staticContext.subject.code };
 }
 
 export async function deleteSubject(id: string): Promise<{ deletedFiles: number }> {
@@ -266,19 +307,25 @@ export async function deleteSubject(id: string): Promise<{ deletedFiles: number 
   const bucket = process.env.R2_BUCKET_NAME;
   if (!client || !bucket) throw new Error('R2 not configured');
 
-  const manifest = await readManifest();
-  const isCustom = manifest.subjects.some((s) => s.id === id);
+  const rows = await listSubjectRows();
+  const isCustom = rows.some((r) => r.kind === 'custom' && r.subjectId === id);
   const isStatic = Boolean(getSubject(id));
 
   if (isCustom) {
-    manifest.subjects = manifest.subjects.filter((s) => s.id !== id);
+    await queryD1(
+      `DELETE FROM subjects WHERE id = ? AND kind = 'custom'`,
+      [id],
+    );
   } else if (isStatic) {
-    manifest.deletedSubjectIds = [...new Set([...manifest.deletedSubjectIds, id])];
+    await queryD1(
+      `INSERT INTO subjects (id, subject_id, kind)
+       VALUES (?, ?, 'deletion')
+       ON CONFLICT(id) DO NOTHING`,
+      [kindId('deletion', id), id],
+    );
   } else {
     throw new Error('Subject not found');
   }
-
-  await writeManifest(manifest);
 
   let deletedFiles = 0;
   const { Contents } = await client.send(
@@ -305,15 +352,17 @@ export async function searchArchiveWithCustom(query: string): Promise<{
   subjects: SubjectContext[]
 }> {
   const results = searchArchive(query);
-  const manifest = await readManifest();
+  const { customSubjects, renames, deletedIds } = partitionRows(
+    await listSubjectRows(),
+  );
 
-  const deleted = new Set(manifest.deletedSubjectIds);
+  const deleted = new Set(deletedIds);
   results.subjects = results.subjects
     .filter(({ subject }) => !deleted.has(subject.id))
-    .map((ctx) => ({ ...ctx, subject: applyRename(ctx.subject, manifest.subjectRenames) }));
+    .map((ctx) => ({ ...ctx, subject: applyRename(ctx.subject, renames) }));
 
   const q = query.trim().toLowerCase();
-  for (const managed of manifest.subjects) {
+  for (const managed of customSubjects) {
     if (!q) continue;
     const programme = getProgramme(managed.programmeId);
     if (!programme) continue;

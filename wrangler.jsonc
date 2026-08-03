@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "notakpmb",
+  "compatibility_date": "2026-08-03",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "notakpmb",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isR2Configured } from '@/lib/r2';
+import { isD1Configured } from '@/lib/d1';
 import { addSubject, deleteSubject, renameSubject } from '@/lib/subjects';
 
 export async function POST(request: NextRequest) {
-  if (!isR2Configured()) {
-    return NextResponse.json({ error: 'R2 not configured' }, { status: 503 });
+  if (!isD1Configured()) {
+    return NextResponse.json({ error: 'D1 not configured' }, { status: 503 });
   }
 
   let body: unknown;
@@ -50,8 +51,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!isR2Configured()) {
-    return NextResponse.json({ error: 'R2 not configured' }, { status: 503 });
+  if (!isD1Configured()) {
+    return NextResponse.json({ error: 'D1 not configured' }, { status: 503 });
   }
 
   const id = request.nextUrl.searchParams.get('id');
@@ -94,8 +95,11 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!isR2Configured()) {
-    return NextResponse.json({ error: 'R2 not configured' }, { status: 503 });
+  if (!isD1Configured() || !isR2Configured()) {
+    return NextResponse.json(
+      { error: 'D1 and R2 must be configured' },
+      { status: 503 },
+    );
   }
 
   const id = request.nextUrl.searchParams.get('id');
