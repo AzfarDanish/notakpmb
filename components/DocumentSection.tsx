@@ -28,7 +28,7 @@ function NativePreview({ url }: { url: string }) {
       {status === 'loading' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-neutral-400 pointer-events-none z-10">
           <Loader2 size={20} className="animate-spin" />
-          <p className="text-sm">Loading preview&hellip;</p>
+          <p className="text-lg">Loading preview&hellip;</p>
         </div>
       )}
       {status === 'error' && (
@@ -80,16 +80,16 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
 
   return (
     <section className={scrollable ? 'flex flex-col flex-1 min-h-0' : undefined}>
-      <h3 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4 shrink-0">
+      <h3 className="text-sm tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4 shrink-0">
         {title}
       </h3>
       {isEmpty && (
         <div className="border border-dashed border-neutral-300 rounded-sm p-8 text-center">
-          <p className="font-serif text-lg text-neutral-500">
+          <p className="font-serif text-2xl text-neutral-500">
             Nothing here yet
           </p>
-          <p className="text-xs text-neutral-400 mt-2">
-            Every archive begins with one contribution. Be the first — the note you share might save a classmate.
+          <p className="text-base text-neutral-400 mt-2">
+            Every archive begins with one contribution. Be the first. The note you share might save a classmate.
           </p>
         </div>
       )}
@@ -106,16 +106,16 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               })}
               className="flex-1 text-left cursor-pointer"
             >
-              <h4 className="font-serif text-xl md:text-2xl group-hover:opacity-60 transition-opacity">
+              <h4 className="font-serif text-2xl md:text-3xl group-hover:opacity-60 transition-opacity">
                 {item.title}
               </h4>
               {item.originalName && (
-                <p className="text-xs text-neutral-400 mt-1 font-mono">
+                <p className="text-base text-neutral-400 mt-1 font-mono">
                   {item.originalName}
                 </p>
               )}
             </button>
-            <div className="flex items-center gap-4 text-sm text-neutral-500 shrink-0">
+            <div className="flex items-center gap-4 text-lg text-neutral-500 shrink-0">
               <span className="w-24 text-right hidden sm:block">{item.date}</span>
               <span className="w-16 text-right hidden sm:block">{item.size}</span>
 
@@ -178,13 +178,13 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
             >
               <div className="p-6 md:p-12 flex flex-col h-full">
                 <div className="flex items-center justify-between gap-4 mb-6 md:mb-8 shrink-0">
-                  <span className="text-[10px] tracking-widest text-neutral-500 uppercase font-medium truncate pr-2">
+                  <span className="text-sm tracking-widest text-neutral-500 uppercase font-medium truncate pr-2">
                     PREVIEW &middot; {previewItem.title}
                   </span>
                   <div className="flex items-center gap-3 shrink-0">
                     <a
                       href={previewItem.downloadUrl}
-                      className="flex items-center gap-2 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+                      className="flex items-center gap-2 text-sm tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
                       title="Download"
                     >
                       <Download size={16} strokeWidth={1.5} />
@@ -239,29 +239,29 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 className="bg-white border border-neutral-200 shadow-2xl rounded-sm p-8 max-w-md w-full"
               >
                 <h3 className="font-serif text-2xl font-bold mb-2 text-neutral-900">Delete Document</h3>
-                <p className="text-neutral-500 text-sm mb-8">
+                <p className="text-neutral-500 text-lg mb-8">
                   Are you sure you want to delete <span className="font-medium text-neutral-900">&quot;{deleteItem.title}&quot;</span>? This action cannot be undone.
                 </p>
 
                 {deleteError && (
-                  <p className="text-sm text-red-500 -mt-4 mb-4">{deleteError}</p>
+                  <p className="text-lg text-red-500 -mt-4 mb-4">{deleteError}</p>
                 )}
                 {deleteSuccess && (
-                  <p className="text-sm text-green-600 -mt-4 mb-4">Document deleted successfully.</p>
+                  <p className="text-lg text-green-600 -mt-4 mb-4">Document deleted successfully.</p>
                 )}
 
                 <div className="flex items-center justify-end gap-4">
                   <button 
                     onClick={() => setDeleteItem(null)}
                     disabled={isDeleting || deleteSuccess}
-                    className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 text-sm tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
                   >
                     CANCEL
                   </button>
                   <button 
                     onClick={handleDelete}
                     disabled={isDeleting || deleteSuccess}
-                    className="px-6 py-3 bg-red-500 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
+                    className="px-6 py-3 bg-red-500 text-white text-sm tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
                   >
                     {isDeleting ? <><Loader2 size={14} className="animate-spin" /> DELETING...</> : deleteSuccess ? <><Check size={14} /> DELETED</> : 'DELETE'}
                   </button>

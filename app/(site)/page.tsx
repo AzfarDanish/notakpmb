@@ -21,8 +21,8 @@ export default async function Home() {
         <h1 className="font-serif text-6xl md:text-[10rem] font-bold tracking-tighter leading-[0.9] mb-8 md:mb-10">
           Nota<br />KPMB
         </h1>
-        <p className="text-neutral-700 max-w-[280px] leading-relaxed text-sm mb-8">
-          A curated digital repository of notes, exercises, and past year questions for KPMB students. Preserving the pursuit of knowledge. Built by students, for students — a shared archive only grows with your notes.
+        <p className="text-neutral-700 max-w-[280px] leading-relaxed text-lg mb-8">
+          A curated digital repository of notes, exercises, and past year questions for KPMB students. Preserving the pursuit of knowledge. Built by students, for students. A shared archive only grows with your notes.
         </p>
       </div>
 
@@ -43,7 +43,7 @@ export default async function Home() {
               <h2 className="font-serif text-4xl md:text-7xl font-bold mb-2 md:mb-4 group-hover:opacity-60 transition-opacity tracking-tight">
                 {programme.code}
               </h2>
-              <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
+              <p className="text-sm tracking-widest text-neutral-400 uppercase font-medium">
                 {totalFiles} FILES <span className="mx-2">&middot;</span>{' '}
                 {totalSubjects} SUBJECTS
               </p>

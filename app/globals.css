@@ -10,7 +10,7 @@
 
 .code-viewer {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   line-height: 1.6;
   color: #1A1A1A;
   white-space: pre;
@@ -19,7 +19,7 @@
 
 .docx-content {
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   line-height: 1.7;
   color: #1A1A1A;
 }
@@ -35,10 +35,10 @@
   margin: 1.5em 0 0.5em;
 }
 
-.docx-content h1 { font-size: 1.75rem; }
-.docx-content h2 { font-size: 1.5rem; }
-.docx-content h3 { font-size: 1.25rem; }
-.docx-content h4 { font-size: 1.125rem; }
+.docx-content h1 { font-size: 2rem; }
+.docx-content h2 { font-size: 1.75rem; }
+.docx-content h3 { font-size: 1.5rem; }
+.docx-content h4 { font-size: 1.25rem; }
 
 .docx-content p {
   margin: 0 0 1em;
@@ -81,7 +81,7 @@
   width: 100%;
   border-collapse: collapse;
   margin: 0 0 1em;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .docx-content th,

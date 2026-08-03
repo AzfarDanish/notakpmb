@@ -42,7 +42,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
       <body className="bg-paper text-neutral-900 font-sans antialiased selection:bg-neutral-200 flex flex-col min-h-screen md:h-dvh md:overflow-hidden" suppressHydrationWarning>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:bg-ink focus:text-paper focus:px-4 focus:py-2 focus:text-xs focus:tracking-widest focus:uppercase focus:rounded-sm"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:bg-ink focus:text-paper focus:px-4 focus:py-2 focus:text-base focus:tracking-widest focus:uppercase focus:rounded-sm"
         >
           Skip to content
         </a>

@@ -75,7 +75,7 @@ export function MoreMenu({
                   setOpen(false);
                   item.onClick();
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[10px] tracking-widest uppercase font-medium text-left transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm tracking-widest uppercase font-medium text-left transition-colors cursor-pointer ${
                   item.danger
                     ? 'text-red-500 hover:bg-red-50'
                     : 'text-neutral-700 hover:bg-neutral-100'

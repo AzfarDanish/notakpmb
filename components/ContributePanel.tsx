@@ -94,7 +94,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="text-[10px] tracking-widest text-neutral-900 uppercase font-bold hover:opacity-60 transition-opacity flex items-center gap-2"
+        className="text-sm tracking-widest text-neutral-900 uppercase font-bold hover:opacity-60 transition-opacity flex items-center gap-2"
       >
         <span>+</span> CONTRIBUTE
       </button>
@@ -118,7 +118,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
             >
               <div className="p-6 md:p-12 flex-1 overflow-y-auto">
                 <div className="flex items-center justify-between mb-12 md:mb-24">
-                  <span className="text-[10px] tracking-widest text-neutral-500 uppercase font-medium">
+                  <span className="text-sm tracking-widest text-neutral-500 uppercase font-medium">
                     CONTRIBUTE
                   </span>
                   <button 
@@ -188,10 +188,10 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                         <div className="w-8 h-10 bg-accent rounded-sm flex items-center justify-center mb-2">
                           <FileText size={18} strokeWidth={2} className="text-white" />
                         </div>
-                        <p className="font-serif text-neutral-900 text-lg">
+                        <p className="font-serif text-neutral-900 text-2xl">
                           {file.name}
                         </p>
-                        <p className="text-[10px] tracking-widest text-neutral-500 uppercase">
+                        <p className="text-sm tracking-widest text-neutral-500 uppercase">
                           {(file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </>
@@ -203,18 +203,18 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                         <p className="font-serif text-neutral-600">
                           {isDragging ? 'Drop to select.' : 'Drag document here or browse.'}
                         </p>
-                        <p className="text-[10px] tracking-widest text-neutral-400 uppercase">
+                        <p className="text-sm tracking-widest text-neutral-400 uppercase">
                           PDF, DOC, DOCX, TXT up to 5MB
                         </p>
                       </>
                     )}
                   </div>
                   {error && (
-                    <p className="text-red-500 text-xs text-center">{error}</p>
+                    <p className="text-red-500 text-base text-center">{error}</p>
                   )}
                   {isPublished && (
-                    <p className="text-green-600 text-xs text-center">
-                      Contributed! The archive just grew — thank you for sharing.
+                    <p className="text-green-600 text-base text-center">
+                      Contributed! The archive just grew. Thank you for sharing.
                     </p>
                   )}
                 </div>
@@ -224,7 +224,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                 <button 
                   onClick={handlePublish}
                   disabled={!file || !title.trim() || isUploading || isPublished}
-                  className="w-full bg-ink text-white py-5 text-[10px] tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full bg-ink text-white py-5 text-sm tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
                     <><Loader2 size={14} className="animate-spin" /> CONTRIBUTING...</>

@@ -45,7 +45,7 @@ export function SpreadsheetViewer({ url }: { url: string }) {
 
   if (state.status === 'loading') {
     return (
-      <div className="flex items-center justify-center flex-1 min-h-0 text-neutral-400 text-sm p-8">
+      <div className="flex items-center justify-center flex-1 min-h-0 text-neutral-400 text-lg p-8">
         Loading spreadsheet…
       </div>
     );
@@ -70,12 +70,12 @@ export function SpreadsheetViewer({ url }: { url: string }) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="shrink-0 px-8 md:px-10 pt-6 pb-4">
-        <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium">
+        <p className="text-sm tracking-widest uppercase text-neutral-400 font-medium">
           {state.sheetName}
         </p>
       </div>
       <div className="flex-1 min-h-0 overflow-auto px-8 md:px-10 pb-8 md:pb-10">
-        <table className="docx-content w-full border-collapse text-sm">
+        <table className="docx-content w-full border-collapse text-lg">
           <tbody>
             {state.rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
