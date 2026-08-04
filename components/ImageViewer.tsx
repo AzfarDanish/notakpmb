@@ -21,7 +21,7 @@ export function ImageViewer({ url, title }: { url: string; title: string }) {
       {status === 'loading' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-neutral-400 pointer-events-none">
           <Loader2 size={20} className="animate-spin" />
-          <p className="text-lg">Loading image&hellip;</p>
+          <p className="text-sm">Loading image&hellip;</p>
         </div>
       )}
       {status === 'error' && (

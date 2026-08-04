@@ -42,7 +42,7 @@ export function DocxPreview({ url, title }: { url: string; title: string }) {
 
   if (state.status === 'loading') {
     return (
-      <div className="flex items-center justify-center flex-1 min-h-0 text-neutral-400 text-lg p-8">
+      <div className="flex items-center justify-center flex-1 min-h-0 text-neutral-400 text-sm p-8">
         Loading document preview…
       </div>
     );

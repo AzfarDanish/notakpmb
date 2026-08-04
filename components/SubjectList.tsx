@@ -59,7 +59,7 @@ export function SubjectList({
                       }`}
                     >
                       <Link href={`/subject/${subject.id}`} className="flex flex-col gap-2 pr-8">
-                        <p className="text-sm tracking-widest text-accent uppercase font-bold">
+                        <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
                           {subject.code}
                         </p>
                         <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
@@ -252,7 +252,7 @@ function AddSubjectModal({
         <div>
           <label
             htmlFor="subject-title"
-            className="block text-sm tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
           >
             Subject title
           </label>
@@ -264,44 +264,44 @@ function AddSubjectModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Machine Learning"
             autoFocus
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
         <div>
           <label
             htmlFor="subject-code"
-            className="block text-sm tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
           >
             Course code
           </label>
           <input
-            id="subject-code"
+id="subject-code"
             type="text"
             value={code}
             disabled={success}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="e.g. CSC 2953"
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="e.g. CSC 2853"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm uppercase placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
-        {error && <p className="text-lg text-red-500">{error}</p>}
-        {success && <p className="text-lg text-green-600">Subject added successfully.</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        {success && <p className="text-sm text-green-600">Subject added successfully.</p>}
 
         <div className="flex items-center justify-end gap-4 mt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting || success}
-            className="px-6 py-3 text-sm tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
           >
             CANCEL
           </button>
           <button
             type="submit"
             disabled={!title.trim() || !code.trim() || isSubmitting || success}
-            className="px-6 py-3 bg-neutral-900 text-white text-sm tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+            className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <><Loader2 size={14} className="animate-spin" /> ADDING...</>
@@ -361,18 +361,18 @@ function DeleteSubjectModal({
       <h3 className="font-serif text-2xl font-bold mb-2 text-neutral-900">
         Delete Subject
       </h3>
-      <p className="text-neutral-500 text-lg mb-2">
+      <p className="text-neutral-500 text-sm mb-2">
         Are you sure you want to delete{' '}
         <span className="font-medium text-neutral-900">&quot;{subject.title}&quot;</span>?
       </p>
-      <p className="text-neutral-500 text-lg mb-6">
+      <p className="text-neutral-500 text-sm mb-6">
         This will also permanently delete its uploaded files. This action cannot
         be undone.
       </p>
 
       <label
         htmlFor="delete-subject-confirm"
-        className="block text-sm tracking-widest uppercase font-medium text-neutral-500 mb-2"
+        className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
       >
         Type <span className="text-neutral-900">&quot;{subject.title}&quot;</span> to confirm
       </label>
@@ -384,24 +384,24 @@ function DeleteSubjectModal({
         onChange={(e) => setTyped(e.target.value)}
         placeholder={subject.title}
         autoFocus
-        className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-lg placeholder:text-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+        className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
       />
 
-      {error && <p className="text-lg text-red-500 mt-3">{error}</p>}
-      {success && <p className="text-lg text-green-600 mt-3">Subject deleted successfully.</p>}
+      {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+      {success && <p className="text-sm text-green-600 mt-3">Subject deleted successfully.</p>}
 
       <div className="flex items-center justify-end gap-4 mt-6">
         <button
           onClick={onClose}
           disabled={isDeleting || success}
-          className="px-6 py-3 text-sm tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+          className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
         >
           CANCEL
         </button>
         <button
           onClick={handleDelete}
           disabled={!matches || isDeleting || success}
-          className="px-6 py-3 bg-red-500 text-white text-sm tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+          className="px-6 py-3 bg-red-500 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
         >
           {isDeleting ? (
             <><Loader2 size={14} className="animate-spin" /> DELETING...</>
@@ -426,7 +426,7 @@ function RenameSubjectModal({
   onRenamed: () => void
 }) {
   const [title, setTitle] = useState(subject.title);
-  const [code, setCode] = useState(subject.code);
+  const [code, setCode] = useState(subject.code.toUpperCase());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -480,7 +480,7 @@ function RenameSubjectModal({
         <div>
           <label
             htmlFor="rename-subject-title"
-            className="block text-sm tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
           >
             Subject title
           </label>
@@ -492,14 +492,14 @@ function RenameSubjectModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder={subject.title}
             autoFocus
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
         <div>
           <label
             htmlFor="rename-subject-code"
-            className="block text-sm tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
           >
             Course code
           </label>
@@ -508,28 +508,28 @@ function RenameSubjectModal({
             type="text"
             value={code}
             disabled={success}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder={subject.code}
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-lg placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder={subject.code && subject.code.toUpperCase()}
+            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm uppercase placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
           />
         </div>
 
-        {error && <p className="text-lg text-red-500">{error}</p>}
-        {success && <p className="text-lg text-green-600">Subject renamed successfully.</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        {success && <p className="text-sm text-green-600">Subject renamed successfully.</p>}
 
         <div className="flex items-center justify-end gap-4 mt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting || success}
-            className="px-6 py-3 text-sm tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
           >
             CANCEL
           </button>
           <button
             type="submit"
             disabled={!title.trim() || !code.trim() || isSubmitting || success}
-            className="px-6 py-3 bg-neutral-900 text-white text-sm tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+            className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <><Loader2 size={14} className="animate-spin" /> RENAMING...</>

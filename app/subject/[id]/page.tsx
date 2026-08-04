@@ -43,7 +43,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
       <div className="mt-8 md:mt-12 flex flex-col md:flex-row gap-12 md:gap-32 relative md:flex-1 md:min-h-0">
         <div className="md:w-1/3 flex flex-col md:min-h-0">
           <div>
-            <p className="text-sm tracking-widest text-accent uppercase font-bold mb-4">
+            <p className="text-[10px] tracking-widest text-accent uppercase font-bold mb-4">
               {subject.code}
             </p>
 
@@ -52,7 +52,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
             </h1>
 
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm tracking-widest text-neutral-400 uppercase font-medium">
+              <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
                 {totalFiles} FILES
               </p>
               <ContributePanel subjectId={id} />

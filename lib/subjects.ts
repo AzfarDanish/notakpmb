@@ -198,7 +198,7 @@ export async function addSubject(input: {
 }): Promise<ManagedSubject> {
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
-  const code = input.code.trim();
+  const code = input.code.trim().toUpperCase();
   if (!code) throw new Error('Course code is required');
 
   const subject: ManagedSubject = {
@@ -228,7 +228,7 @@ export async function renameSubject(input: {
 }): Promise<Subject> {
   const title = input.title.trim();
   if (!title) throw new Error('Subject title is required');
-  const code = input.code.trim();
+  const code = input.code.trim().toUpperCase();
   if (!code) throw new Error('Course code is required');
 
   const rows = await loadDeltas();

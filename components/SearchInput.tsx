@@ -61,11 +61,13 @@ export function SearchInput({
         aria-label="Search programmes and subjects"
         autoFocus={autoFocus}
         className={`w-full bg-transparent border border-neutral-300 rounded-full pl-11 ${
-          isLarge ? 'pr-16 py-4 text-xl' : 'pr-12 py-2.5 text-lg'
+          isLarge ? 'pr-16 py-4 text-base' : 'pr-12 py-2.5 text-sm'
         } placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors`}
       />
       <kbd
-        className={`absolute right-4 hidden sm:block text-sm tracking-widest uppercase text-neutral-400 border border-neutral-300 rounded px-1.5 py-0.5 ${isLarge ? 'text-lg' : ''}`}
+        className={`absolute right-4 hidden sm:block text-[10px] tracking-widest uppercase text-neutral-400 border border-neutral-300 rounded px-1.5 py-0.5 ${
+          isLarge ? 'text-xs' : ''
+        }`}
       >
         /
       </kbd>

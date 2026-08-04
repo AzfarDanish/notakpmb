@@ -36,21 +36,21 @@ export default async function ProgrammePage({
       />
 
       <div className="mt-8 md:mt-12 mb-12 md:mb-20">
-        <p className="text-sm tracking-widest text-accent uppercase font-bold mb-4">
+        <p className="text-[10px] tracking-widest text-accent uppercase font-bold mb-4">
           {programme.code}
         </p>
         <h1 className="font-serif text-4xl md:text-7xl font-bold tracking-tight leading-[1.05] max-w-4xl">
           {programme.title}
         </h1>
         <div className="mt-6 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-          <p className="text-neutral-600 leading-relaxed text-lg max-w-xl">
+          <p className="text-neutral-600 leading-relaxed text-sm max-w-xl">
             {programme.description}
           </p>
           <div className="md:shrink-0">
             <SearchInput size="sm" />
           </div>
         </div>
-        <p className="text-sm tracking-widest text-neutral-400 uppercase font-medium mt-6">
+        <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mt-6">
           {totalFiles} FILES <span className="mx-2">&middot;</span>{' '}
           {totalSubjects} SUBJECTS
         </p>
