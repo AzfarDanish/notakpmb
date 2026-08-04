@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/next';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import Script from 'next/script';
@@ -59,6 +60,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <div id="scroll-root" className="flex-1 md:min-h-0 md:overflow-y-auto md:flex md:flex-col">
           {children}
         </div>
+        <Analytics />
       </body>
     </html>
   );
