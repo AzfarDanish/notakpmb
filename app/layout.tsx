@@ -15,26 +15,44 @@ const sfProDisplay = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://ais-pre-we3xed4xziy6xyjwuusywk-579051113471.asia-southeast1.run.app'),
-  title: 'NotaKPMB - Ultimate Archive for Computer Science Students',
-  description: 'Access a meticulously curated digital repository of Computer Science notes, exercises, and past year questions. Boost your academic productivity today.',
+  metadataBase: new URL('https://notakpmb.vercel.app'),
+  title: {
+    default: 'NotaKPMB — Notes, Exercises & Past Year Questions for KPMB Students',
+    template: '%s | NotaKPMB',
+  },
+  description:
+    'A curated digital archive of notes, exercises and past year questions shared by KPMB students. NotaKPMB (Nota KPMB) — explore and contribute your own notes.',
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    title: 'NotaKPMB - Ultimate Archive for Computer Science Students',
-    description: 'Access a meticulously curated digital repository of Computer Science notes, exercises, and past year questions. Boost your academic productivity today.',
+    title: 'NotaKPMB — Notes, Exercises & Past Year Questions for KPMB Students',
+    description:
+      'A curated digital archive of notes, exercises and past year questions shared by KPMB students. Contribute your notes and help the archive grow.',
     type: 'website',
     url: '/',
+    siteName: 'NotaKPMB',
+    locale: 'en_MY',
     images: [
       {
-        url: '/notakpmb-og.webp',
+        url: '/notakpmb_og_image.webp',
         width: 1200,
         height: 630,
-        alt: 'Nota KPMB - The Archive',
+        alt: 'Nota KPMB - Shared Notes and Past Year Questions',
       },
     ],
   },
-  other: {
-    'og:logo': 'https://ais-pre-we3xed4xziy6xyjwuusywk-579051113471.asia-southeast1.run.app/icon',
-  }
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NotaKPMB — Notes, Exercises & Past Year Questions for KPMB Students',
+    description:
+      'A curated digital archive of notes, exercises and past year questions shared by KPMB students. Contribute your notes and help the archive grow.',
+    images: ['/notakpmb_og_image.webp'],
+  },
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
@@ -57,6 +75,29 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
             gtag('config', 'G-WJG1B5VZDS');
           `}
         </Script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'NotaKPMB',
+              alternateName: 'Nota KPMB',
+              url: 'https://notakpmb.vercel.app',
+              description:
+                'A curated digital archive of notes, exercises and past year questions shared by KPMB students.',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate:
+                    'https://notakpmb.vercel.app/search?q={search_term_string}',
+                },
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
         <div id="scroll-root" className="flex-1 md:min-h-0 md:overflow-y-auto md:flex md:flex-col">
           {children}
         </div>

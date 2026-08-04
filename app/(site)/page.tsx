@@ -22,7 +22,10 @@ export default async function Home() {
           Nota<br />KPMB
         </h1>
         <p className="text-neutral-700 max-w-[280px] leading-relaxed text-sm mb-8">
-          A curated digital repository of notes, exercises, and past year questions for KPMB students. Preserving the pursuit of knowledge. Built by students, for students. A shared archive only grows with your notes.
+          Nota KPMB (NotaKPMB): a curated digital archive of notes, exercises
+          and past year questions, shared by KPMB students. Preserving the
+          pursuit of knowledge. Built by students, for students. A shared
+          archive only grows with your notes.
         </p>
       </div>
 

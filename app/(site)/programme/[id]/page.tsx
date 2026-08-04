@@ -1,9 +1,31 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getAllFileCounts, isR2Configured } from '@/lib/r2';
 import { getProgramme, getSubjectsForProgramme } from '@/lib/subjects';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { SearchInput } from '@/components/SearchInput';
 import { SubjectList } from '@/components/SubjectList';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params;
+  const programme = await getProgramme(id);
+
+  if (!programme) return {};
+
+  return {
+    title: programme.title,
+    description: `${programme.description} Browse and share notes, exercises and past year questions for ${programme.title}.`,
+    alternates: { canonical: `/programme/${programme.id}` },
+    openGraph: {
+      title: programme.title,
+      description: `${programme.description} Browse and share notes, exercises and past year questions for ${programme.title}.`,
+    },
+  };
+}
 
 export default async function ProgrammePage({
   params,

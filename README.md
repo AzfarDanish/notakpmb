@@ -91,7 +91,7 @@ app/
 ├── api/                     # upload / download / delete / subjects
 ├── layout.tsx               # Root layout: fonts, metadata, GA4
 ├── globals.css
-└── icon.tsx
+└── icon.png                # Tab favicon (static PNG)
 components/                  # SubjectList, DocumentSection, previewers,
 │                            # ContributePanel, SearchInput, Breadcrumbs, …
 lib/

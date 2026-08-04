@@ -4,6 +4,30 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { getSubjectWithCustom } from '@/lib/subjects';
 import { getSubjectDocuments } from '@/lib/r2';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params;
+  const found = await getSubjectWithCustom(id);
+
+  if (!found) return {};
+
+  const { subject, programme } = found;
+
+  return {
+    title: `${subject.title} (${subject.code})`,
+    description: `Notes, exercises and past year questions for ${subject.title} (${subject.code}) — ${programme.title} at KPMB. Browse the files or contribute your own notes.`,
+    alternates: { canonical: `/subject/${subject.id}` },
+    openGraph: {
+      title: `${subject.title} (${subject.code})`,
+      description: `Notes, exercises and past year questions for ${subject.title} at KPMB. Browse the files or contribute your own notes.`,
+    },
+  };
+}
 
 export default async function SubjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

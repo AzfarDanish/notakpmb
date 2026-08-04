@@ -6,8 +6,27 @@ export type Crumb = {
 }
 
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
+  const structured = items.filter((item) => item.href)
+
   return (
     <nav aria-label="Breadcrumb">
+      {structured.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: structured.map((item, index) => ({
+                '@type': 'ListItem',
+                position: index + 1,
+                name: item.label,
+                item: `https://notakpmb.vercel.app${item.href}`,
+              })),
+            }),
+          }}
+        />
+      )}
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] tracking-widest uppercase font-medium">
         {items.map((item, index) => {
           const isLast = index === items.length - 1

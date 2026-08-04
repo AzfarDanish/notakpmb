@@ -1,9 +1,18 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { searchArchiveWithCustom, getSubjectWithCustom } from '@/lib/subjects';
 import { searchFiles } from '@/lib/r2';
 import { SearchInput } from '@/components/SearchInput';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { EmptyState } from '@/components/EmptyState';
+
+export const metadata: Metadata = {
+  title: 'Search the Archive',
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default async function SearchPage({
   searchParams,
