@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
+  verification: {
+    google: 'DDHJYxNHZvNSwP2kJwjJGkezBdDoLCfImcBiKFWD5Cc',
+  },
   manifest: '/site.webmanifest',
   openGraph: {
     title: 'NotaKPMB — Notes, Exercises & Past Year Questions',
