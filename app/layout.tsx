@@ -1,5 +1,5 @@
 import { Analytics } from '@vercel/analytics/next';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import Script from 'next/script';
 import './globals.css';
@@ -17,7 +17,7 @@ const sfProDisplay = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL('https://notakpmb.vercel.app'),
   title: {
-    default: 'NotaKPMB — Notes, Exercises & Past Year Questions for KPMB Students',
+    default: 'NotaKPMB — Notes, Exercises & Past Year Questions',
     template: '%s | NotaKPMB',
   },
   description:
@@ -25,8 +25,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
+  manifest: '/site.webmanifest',
   openGraph: {
-    title: 'NotaKPMB — Notes, Exercises & Past Year Questions for KPMB Students',
+    title: 'NotaKPMB — Notes, Exercises & Past Year Questions',
     description:
       'A curated digital archive of notes, exercises and past year questions shared by KPMB students. Contribute your notes and help the archive grow.',
     type: 'website',
@@ -44,15 +45,23 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NotaKPMB — Notes, Exercises & Past Year Questions for KPMB Students',
+    title: 'NotaKPMB — Notes, Exercises & Past Year Questions',
     description:
       'A curated digital archive of notes, exercises and past year questions shared by KPMB students. Contribute your notes and help the archive grow.',
     images: ['/notakpmb_og_image.webp'],
   },
   icons: {
-    icon: '/icon.png',
-    apple: '/icon.png',
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#F9F8F6',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
