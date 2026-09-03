@@ -30,20 +30,24 @@ export async function getAllFileCounts(): Promise<Record<string, number>> {
   if (!client || !process.env.R2_BUCKET_NAME) return {};
 
   try {
-    const listCmd = new ListObjectsV2Command({
-      Bucket: process.env.R2_BUCKET_NAME,
-    });
-    const { Contents } = await client.send(listCmd);
-    
-    if (!Contents) return {};
-
     const counts: Record<string, number> = {};
-    for (const item of Contents) {
-      if (!item.Key) continue;
-      const subjectId = item.Key.split('/')[0];
-      if (subjectId && !subjectId.startsWith('_')) {
-        counts[subjectId] = (counts[subjectId] || 0) + 1;
+    let nextToken: string | undefined = undefined;
+    while (true) {
+      const cmd: ListObjectsV2Command = new ListObjectsV2Command({
+        Bucket: process.env.R2_BUCKET_NAME as string,
+        ContinuationToken: nextToken,
+      });
+      const res = await client.send(cmd);
+      const Contents = res.Contents ?? [];
+      for (const item of Contents) {
+        if (!item.Key) continue;
+        const subjectId = item.Key.split('/')[0];
+        if (subjectId && !subjectId.startsWith('_')) {
+          counts[subjectId] = (counts[subjectId] || 0) + 1;
+        }
       }
+      if (!res.IsTruncated) break;
+      nextToken = res.NextContinuationToken;
     }
     return counts;
   } catch (e) {

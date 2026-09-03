@@ -39,14 +39,12 @@ export default async function ProgrammePage({
     notFound();
   }
 
-  const fileCounts = await getAllFileCounts();
-  const totalFiles = programme.subjects.reduce(
-    (acc, s) => acc + (fileCounts[s.id] || 0),
-    0,
-  );
-  const totalSubjects = programme.subjects.length;
-
-  const subjects = await getSubjectsForProgramme(id);
+  const [fileCounts, subjects] = await Promise.all([
+    getAllFileCounts(),
+    getSubjectsForProgramme(id),
+  ]);
+  const totalFiles = subjects.reduce((acc, s) => acc + (fileCounts[s.id] || 0), 0);
+  const totalSubjects = subjects.length;
 
   return (
     <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">

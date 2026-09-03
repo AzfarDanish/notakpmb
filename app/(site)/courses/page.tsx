@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { getProgrammesWithCourses } from '@/lib/courses'
+import { getAllCourses } from '@/lib/courses'
+import { getProgrammes } from '@/lib/subjects'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { CourseLookup } from '@/components/CourseLookup'
 
@@ -10,8 +11,21 @@ export const metadata: Metadata = {
 }
 
 export default async function CoursesPage() {
-  const programmes = await getProgrammesWithCourses()
-  const total = programmes.reduce((a, p) => a + p.subjects.length, 0)
+  const [catalog, programmes] = await Promise.all([getAllCourses(), getProgrammes()])
+  const total = catalog.length
+  // Group catalog courses by programme for browsing (catalog is source of truth, not ledger)
+  const catalogByProgramme = new Map<string, typeof catalog>()
+  for (const c of catalog) {
+    const arr = catalogByProgramme.get(c.programmeId) ?? []
+    arr.push(c)
+    catalogByProgramme.set(c.programmeId, arr)
+  }
+  const programmesWithCatalog = programmes.map((p) => ({
+    ...p,
+    subjects: (catalogByProgramme.get(p.id) ?? [])
+      .map((c) => ({ id: c.id, title: c.title, code: c.code }))
+      .sort((a, b) => a.code.localeCompare(b.code)),
+  }))
 
   return (
     <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">
@@ -35,7 +49,7 @@ export default async function CoursesPage() {
       </div>
 
       <div className="mt-14 md:mt-20 max-w-5xl">
-        {programmes.map((programme) => (
+        {programmesWithCatalog.map((programme) => (
           <section key={programme.id} className="mb-14 border-t border-neutral-200 pt-8">
             <div className="flex items-baseline justify-between gap-4 mb-6">
               <div>

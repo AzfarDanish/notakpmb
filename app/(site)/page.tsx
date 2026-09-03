@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAllFileCounts } from '@/lib/r2';
 import { getProgrammes } from '@/lib/subjects';
+import { getAllCourses } from '@/lib/courses';
 import { CourseLookup } from '@/components/CourseLookup';
 
 const programmeMargins = [
@@ -13,8 +14,12 @@ const programmeMargins = [
 ];
 
 export default async function Home() {
-  const programmes = await getProgrammes();
-  const fileCounts = await getAllFileCounts();
+  const [programmes, fileCounts, catalog] = await Promise.all([
+    getProgrammes(),
+    getAllFileCounts(),
+    getAllCourses(),
+  ]);
+  const catalogCount = catalog.length;
 
   return (
     <main id="main" className="max-w-7xl mx-auto px-6 py-16 md:py-24 md:px-12 flex flex-col md:flex-row gap-12 md:gap-8">
@@ -32,7 +37,7 @@ export default async function Home() {
           <p className="text-[10px] tracking-widest uppercase font-bold text-neutral-500 mb-3">Find a subject → get its code</p>
           <CourseLookup size="sm" placeholder="Type subject e.g. Web Programming" />
           <Link href="/courses" className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 transition-colors mt-3 underline decoration-dotted">
-            Browse all 36 courses in the cloud →
+            Browse all {catalogCount} courses in the cloud →
           </Link>
         </div>
       </div>
