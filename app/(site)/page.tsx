@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAllFileCounts } from '@/lib/r2';
 import { getProgrammes } from '@/lib/subjects';
+import { CourseLookup } from '@/components/CourseLookup';
 
 const programmeMargins = [
   'ml-0 md:ml-12',
@@ -27,6 +28,13 @@ export default async function Home() {
           pursuit of knowledge. Built by students, for students. A shared
           archive only grows with your notes.
         </p>
+        <div className="max-w-[360px] mb-8">
+          <p className="text-[10px] tracking-widest uppercase font-bold text-neutral-500 mb-3">Find a subject → get its code</p>
+          <CourseLookup size="sm" placeholder="Type subject e.g. Web Programming" />
+          <Link href="/courses" className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 transition-colors mt-3 underline decoration-dotted">
+            Browse all 36 courses in the cloud →
+          </Link>
+        </div>
       </div>
 
       <div className="md:w-7/12 flex flex-col gap-16 md:gap-24 mt-8 md:mt-4">

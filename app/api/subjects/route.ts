@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ error: e.message }, { status: 400 });
     }
+    if (e instanceof Error && e.message === 'Subject already exists') {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
     console.error('Add subject error:', e);
     return NextResponse.json({ error: 'Failed to add subject' }, { status: 500 });
   }

@@ -6,7 +6,7 @@
     {
       "binding": "DB",
       "database_name": "notakpmb",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "3d427e89-f8b5-45ec-9076-25b77213b20d",
       "migrations_dir": "migrations"
     }
   ]

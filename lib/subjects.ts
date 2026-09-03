@@ -7,12 +7,16 @@ import { d1Or, queryD1 } from '@/lib/d1';
 import {
   getProgramme as getStaticProgramme,
   getSubject as getStaticSubject,
-  getProgrammes as getStaticProgrammes,
   searchArchive as staticSearchArchive,
   type Programme,
   type Subject,
   type SubjectContext,
 } from '@/lib/data';
+import {
+  getCourse as getCloudCourse,
+  searchCourses as searchCloudCourses,
+  getProgrammesWithCourses as getCloudProgrammesWithCourses,
+} from '@/lib/courses';
 
 export type ManagedSubject = Subject & {
   programmeId: string
@@ -107,71 +111,71 @@ async function loadDeltas() {
 }
 
 export async function getProgrammes(): Promise<Programme[]> {
-  const fallback = getStaticProgrammes();
+  const fallback = await getCloudProgrammesWithCourses();
   return d1Or(async () => {
-    const [programmeRows, deltaRows] = await Promise.all([
-      queryD1('SELECT id, code, title, description FROM programmes ORDER BY id'),
+    const [cloudProgrammes, deltaRows] = await Promise.all([
+      getCloudProgrammesWithCourses(),
       loadDeltas(),
     ]);
-    const programmeIds = new Set(programmeRows.results.map((r) => String(r.id ?? '')));
-    const programmesFromD1: Programme[] = programmeRows.results.map((r) => ({
-      id: String(r.id ?? ''),
-      code: String(r.code ?? ''),
-      title: String(r.title ?? ''),
-      description: String(r.description ?? ''),
-      subjects: [],
-    }));
-    const merged = programmesFromD1.map((p) => withDeltas(p, deltaRows));
-    for (const staticProgramme of fallback) {
-      if (!programmeIds.has(staticProgramme.id)) merged.push(staticProgramme);
-    }
-    return merged;
+    return cloudProgrammes.map((p) => withDeltas(p, deltaRows));
   }, fallback);
 }
 
 export async function getProgramme(id: string): Promise<Programme | undefined> {
-  const fallback = getStaticProgramme(id);
+  const fallbackProgrammes = await getCloudProgrammesWithCourses();
+  const fallback = fallbackProgrammes.find((p) => p.id === id) ?? getStaticProgramme(id);
+  if (!fallback) return undefined;
   return d1Or(async () => {
-    const [programmeRows, deltaRows] = await Promise.all([
-      queryD1('SELECT id, code, title, description FROM programmes WHERE id = ?', [id]),
+    const [cloudProgrammes, deltaRows] = await Promise.all([
+      getCloudProgrammesWithCourses(),
       loadDeltas(),
     ]);
-    if (programmeRows.results.length === 0) return undefined;
-    const row = programmeRows.results[0];
-    const programme: Programme = {
-      id: String(row.id ?? ''),
-      code: String(row.code ?? ''),
-      title: String(row.title ?? ''),
-      description: String(row.description ?? ''),
-      subjects: [],
-    };
+    const programme = cloudProgrammes.find((p) => p.id === id);
+    if (!programme) return undefined;
     return withDeltas(programme, deltaRows);
-  }, fallback);
+  }, fallback ? withDeltas(fallback, []) : fallback);
 }
 
 export async function getSubjectsForProgramme(
   programmeId: string,
 ): Promise<Subject[]> {
-  const fallback = getStaticProgramme(programmeId)?.subjects ?? [];
+  // START EMPTY: programme subjects come only from ledger (custom adds via UI), not from catalog.
+  // Catalog (courses) is pick-list for the picker, not auto-enrolled.
+  const fallback: Subject[] = [];
   return d1Or(async () => {
     const deltaRows = await loadDeltas();
-    const staticProgramme = getStaticProgramme(programmeId);
-    if (!staticProgramme) return [];
-    return withDeltas(staticProgramme, deltaRows).subjects;
+    const base: Programme = {
+      id: programmeId,
+      code: getStaticProgramme(programmeId)?.code ?? programmeId,
+      title: getStaticProgramme(programmeId)?.title ?? programmeId,
+      description: getStaticProgramme(programmeId)?.description ?? '',
+      subjects: [],
+    };
+    return withDeltas(base, deltaRows).subjects;
   }, fallback);
 }
 
 export async function getSubjectWithCustom(
   id: string,
 ): Promise<SubjectContext | undefined> {
-  const fallback = getStaticSubject(id);
+  const cloudFallback = await getCloudCourse(id);
+  const fallback = cloudFallback ?? getStaticSubject(id);
   return d1Or(async () => {
     const deltaRows = await loadDeltas();
     const { customSubjects, renames, deletedIds } = partitionRows(deltaRows);
+    if (deletedIds.has(id)) return undefined;
+
+    // Try cloud catalog first
+    const cloudCtx = await getCloudCourse(id);
+    if (cloudCtx) {
+      return {
+        subject: applyRename(cloudCtx.subject, renames),
+        programme: cloudCtx.programme,
+      };
+    }
 
     const staticContext = getStaticSubject(id);
     if (staticContext) {
-      if (deletedIds.has(id)) return undefined;
       return {
         subject: applyRename(staticContext.subject, renames),
         programme: staticContext.programme,
@@ -212,6 +216,13 @@ export async function addSubject(input: {
     input.programmeId,
   ]);
   if (exists.results.length === 0) throw new Error('Unknown programme');
+
+  // Duplicate guard: prevent same code or id already in cloud catalog or custom ledger for this programme
+  const existing = await getSubjectsForProgramme(input.programmeId);
+  const dup = existing.find(
+    (s) => s.code.trim().toUpperCase() === code || s.title.trim().toLowerCase() === title.toLowerCase(),
+  );
+  if (dup) throw new Error('Subject already exists');
 
   await queryD1(
     `INSERT INTO subjects (id, subject_id, kind, title, code, programme_id)
@@ -304,7 +315,11 @@ export async function searchArchiveWithCustom(query: string): Promise<{
   programmes: SubjectContext['programme'][]
   subjects: SubjectContext[]
 }> {
-  const fallback = staticSearchArchive(query);
+  const fallbackStatic = staticSearchArchive(query);
+  const fallback: { programmes: Programme[]; subjects: SubjectContext[] } = {
+    programmes: fallbackStatic.programmes,
+    subjects: [...fallbackStatic.subjects],
+  };
   const q = query.trim().toLowerCase();
   if (!q) return { programmes: [], subjects: [] };
 
@@ -312,21 +327,23 @@ export async function searchArchiveWithCustom(query: string): Promise<{
     const deltaRows = await loadDeltas();
     const { customSubjects, renames, deletedIds } = partitionRows(deltaRows);
 
-    const results = staticSearchArchive(query);
-    results.subjects = results.subjects
+    // Start from cloud course search
+    const cloudSubjects = await searchCloudCourses(query, 20);
+    const subjects = cloudSubjects
       .filter(({ subject }) => !deletedIds.has(subject.id))
       .map((ctx) => ({ ...ctx, subject: applyRename(ctx.subject, renames) }));
 
+    // Include renamed courses that now match but original didn't
     for (const [subjectId, rename] of renames) {
       if (deletedIds.has(subjectId)) continue;
       if (
         rename.title.toLowerCase().includes(q) ||
         (rename.code ?? '').toLowerCase().includes(q)
       ) {
-        if (results.subjects.some((s) => s.subject.id === subjectId)) continue;
-        const ctx = getStaticSubject(subjectId);
+        if (subjects.some((s) => s.subject.id === subjectId)) continue;
+        const ctx = (await getCloudCourse(subjectId)) ?? getStaticSubject(subjectId);
         if (ctx) {
-          results.subjects.push({
+          subjects.push({
             subject: applyRename(ctx.subject, renames),
             programme: ctx.programme,
           });
@@ -334,7 +351,14 @@ export async function searchArchiveWithCustom(query: string): Promise<{
       }
     }
 
-    const { programmes: programmeMatches } = results;
+    // Add legacy static results not in cloud
+    const staticResults = staticSearchArchive(query);
+    for (const ctx of staticResults.subjects) {
+      if (deletedIds.has(ctx.subject.id)) continue;
+      if (subjects.some((s) => s.subject.id === ctx.subject.id)) continue;
+      subjects.push({ ...ctx, subject: applyRename(ctx.subject, renames) });
+    }
+
     for (const managed of customSubjects) {
       const programme = getStaticProgramme(managed.programmeId);
       if (!programme) continue;
@@ -342,13 +366,15 @@ export async function searchArchiveWithCustom(query: string): Promise<{
         managed.title.toLowerCase().includes(q) ||
         managed.code.toLowerCase().includes(q)
       ) {
-        results.subjects.push({
+        if (subjects.some((s) => s.subject.id === managed.id)) continue;
+        subjects.push({
           subject: { id: managed.id, title: managed.title, code: managed.code },
           programme,
         });
       }
     }
 
+    const { programmes: programmeMatches } = staticResults;
     const programmesD1 = await getProgrammes();
     const programmes = programmesD1.filter(
       (p) =>
@@ -357,7 +383,7 @@ export async function searchArchiveWithCustom(query: string): Promise<{
         programmeMatches.some((m) => m.id === p.id),
     );
 
-    return { programmes, subjects: results.subjects };
+    return { programmes, subjects };
   }, fallback);
 }
 

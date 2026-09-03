@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { searchArchiveWithCustom, getSubjectWithCustom } from '@/lib/subjects';
 import { searchFiles } from '@/lib/r2';
 import { SearchInput } from '@/components/SearchInput';
+import { CourseLookup } from '@/components/CourseLookup';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { EmptyState } from '@/components/EmptyState';
 
@@ -46,8 +47,14 @@ export default async function SearchPage({
         <h1 className="font-serif text-5xl md:text-7xl font-bold tracking-tight">
           Search
         </h1>
-        <div className="mt-8">
-          <SearchInput size="lg" autoFocus />
+        <div className="mt-8 flex flex-col gap-6">
+          <CourseLookup size="lg" autoFocus placeholder="Type subject name — instantly shows code (cloud)" />
+          <div className="flex items-center gap-3 text-[10px] tracking-widest uppercase font-medium text-neutral-400">
+            <span className="h-px flex-1 bg-neutral-200" />
+            <span>or classic search (programmes, files)</span>
+            <span className="h-px flex-1 bg-neutral-200" />
+          </div>
+          <SearchInput size="lg" />
         </div>
       </div>
 

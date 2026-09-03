@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
+import { CoursePickerModal } from '@/components/CoursePickerModal';
 import type { Subject } from '@/lib/data';
 
 export function SubjectList({
@@ -112,7 +113,20 @@ export function SubjectList({
       )}
 
       <AnimatePresence>
-        {addOpen && (
+        {addOpen && programmeId === 'dcs' && (
+          <CoursePickerModal
+            onClose={() => setAddOpen(false)}
+            onAdded={() => {
+              setAddOpen(false);
+              router.refresh();
+            }}
+            programmeId={programmeId}
+            existingSubjects={subjects}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {addOpen && programmeId !== 'dcs' && (
           <AddSubjectModal
             onClose={() => setAddOpen(false)}
             onAdded={() => {
