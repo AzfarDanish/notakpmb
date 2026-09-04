@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Search, Loader2, ArrowRight } from 'lucide-react'
 
@@ -13,50 +13,81 @@ type CourseHit = {
 }
 
 export function CourseLookup({
-  placeholder = 'Search subject name — e.g. Programming Fundamentals, CSC 1413',
+  placeholder = 'Search course name or code',
   autoFocus = false,
   size = 'lg',
+  programmeId,
 }: {
   placeholder?: string
   autoFocus?: boolean
   size?: 'sm' | 'lg'
+  programmeId?: string
 }) {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<CourseHit[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const requestSeq = useRef(0)
 
   // debounce fetch
   useEffect(() => {
     const q = query.trim()
-    if (q.length < 2) {
-      setHits([])
-      setOpen(false)
-      setLoading(false)
+    const seq = ++requestSeq.current
+    setError(false)
+
+    if (q.length === 0) {
+      startTransition(() => {
+        setHits([])
+        setOpen(false)
+        setLoading(false)
+        setActiveIndex(-1)
+      })
       return
     }
+
+    setOpen(true)
     setLoading(true)
+    const controller = new AbortController()
+    const delay = q.length === 1 ? 120 : 180
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/courses?q=${encodeURIComponent(q)}&limit=8`)
+        const params = new URLSearchParams({ q, limit: '8' })
+        if (programmeId) params.set('programmeId', programmeId)
+        const res = await fetch(`/api/courses?${params.toString()}`, {
+          signal: controller.signal,
+        })
         if (!res.ok) throw new Error('fetch failed')
         const data = (await res.json()) as { courses: CourseHit[] }
-        setHits(data.courses ?? [])
-        setOpen(true)
-        setActiveIndex(-1)
+        if (seq !== requestSeq.current) return
+        startTransition(() => {
+          setHits(data.courses ?? [])
+          setOpen(true)
+          setActiveIndex(-1)
+          setError(false)
+        })
       } catch {
-        setHits([])
-        setOpen(true)
+        if (controller.signal.aborted || seq !== requestSeq.current) return
+        startTransition(() => {
+          setHits([])
+          setOpen(true)
+          setActiveIndex(-1)
+          setError(true)
+        })
       } finally {
-        setLoading(false)
+        if (seq === requestSeq.current) setLoading(false)
       }
-    }, 250)
-    return () => clearTimeout(t)
-  }, [query])
+    }, delay)
+    return () => {
+      controller.abort()
+      clearTimeout(t)
+    }
+  }, [query, programmeId, startTransition])
 
   // close on outside click
   useEffect(() => {
@@ -73,6 +104,7 @@ export function CourseLookup({
       e.preventDefault()
       setActiveIndex((i) => (i + 1) % Math.max(hits.length, 1))
     } else if (e.key === 'ArrowUp') {
+      if (hits.length === 0) return
       e.preventDefault()
       setActiveIndex((i) => (i - 1 + hits.length) % hits.length)
     } else if (e.key === 'Enter') {
@@ -94,7 +126,7 @@ export function CourseLookup({
         <Search
           size={isLarge ? 20 : 16}
           strokeWidth={1.5}
-          className="absolute left-4 text-neutral-400 pointer-events-none"
+          className="pointer-events-none absolute left-4 text-muted"
           aria-hidden="true"
         />
         <input
@@ -112,14 +144,14 @@ export function CourseLookup({
           role="combobox"
           autoFocus={autoFocus}
           autoComplete="off"
-          className={`w-full bg-transparent border border-neutral-300 rounded-full pl-11 ${
-            isLarge ? 'pr-12 py-4 text-base' : 'pr-12 py-2.5 text-sm'
-          } placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors`}
+          className={`w-full rounded-2xl border border-line bg-white/80 pl-11 text-ink transition-colors placeholder:text-muted/60 focus:border-ink focus:bg-white focus:outline-none ${
+            isLarge ? 'py-4 pr-14 text-base' : 'py-3 pr-12 text-sm'
+          }`}
         />
         <div className="absolute right-3 flex items-center gap-2">
-          {loading && <Loader2 size={16} className="animate-spin text-neutral-400" aria-hidden="true" />}
-          {!loading && query.trim().length >= 2 && (
-            <span className="hidden sm:block text-[10px] tracking-widest uppercase text-neutral-400 border border-neutral-300 rounded px-1.5 py-0.5">
+          {loading && <Loader2 size={16} className="animate-spin text-muted" aria-hidden="true" />}
+          {!loading && query.trim().length > 0 && (
+            <span className="hidden rounded-md border border-line bg-soft px-1.5 py-0.5 text-[10px] font-semibold text-muted sm:block">
               {hits.length}
             </span>
           )}
@@ -128,20 +160,32 @@ export function CourseLookup({
 
       {/* selected quick detail */}
       {selected && open && (
-        <div className="mt-3 hidden md:flex items-center gap-3 text-xs text-neutral-600 border border-neutral-200 rounded-sm px-4 py-3 bg-neutral-50">
-          <span className="text-[10px] tracking-widest uppercase font-bold text-accent">{selected.code}</span>
-          <span className="font-medium text-neutral-900">{selected.title}</span>
-          <span className="text-neutral-400">· {selected.programme.code}</span>
-          <ArrowRight size={14} className="ml-auto text-neutral-400" />
+        <div className="mt-3 hidden items-center gap-3 rounded-2xl bg-sheet px-4 py-3 text-xs text-muted md:flex">
+          <span className="font-bold text-accent">{selected.code}</span>
+          <span className="font-semibold text-ink">{selected.title}</span>
+          <span className="text-muted/70">· {selected.programme.code}</span>
+          <ArrowRight size={14} className="ml-auto text-muted" />
         </div>
       )}
 
       {open && (
-        <div className="absolute left-0 right-0 mt-2 bg-white border border-neutral-200 rounded-sm shadow-xl z-40 max-h-[22rem] overflow-auto">
-          {hits.length === 0 && !loading && (
+        <div className="absolute left-0 right-0 z-40 mt-2 max-h-[22rem] overflow-auto rounded-3xl border border-line bg-white shadow-[0_24px_80px_rgba(23,20,17,0.14)]">
+          {loading && hits.length === 0 && (
+            <div className="flex items-center justify-center gap-2 px-5 py-8 text-sm font-semibold text-muted">
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+              Searching courses
+            </div>
+          )}
+          {error && !loading && (
             <div className="px-5 py-8 text-center">
-              <p className="text-sm text-neutral-900 font-medium">No course found for “{query.trim()}”</p>
-              <p className="text-xs text-neutral-500 mt-1">Try the code e.g. CSC 1383 or a keyword like Database.</p>
+              <p className="text-sm font-semibold text-ink">Could not search courses</p>
+              <p className="mt-1 text-xs text-muted">Check your connection and keep typing to try again.</p>
+            </div>
+          )}
+          {!error && hits.length === 0 && !loading && (
+            <div className="px-5 py-8 text-center">
+              <p className="text-sm font-semibold text-ink">No course found for “{query.trim()}”</p>
+              <p className="mt-1 text-xs text-muted">Try a code like CSC 1383 or a word like Database.</p>
             </div>
           )}
           {hits.length > 0 && (
@@ -153,24 +197,24 @@ export function CourseLookup({
                     <Link
                       href={hit.href}
                       onMouseEnter={() => setActiveIndex(idx)}
-                      className={`flex items-start justify-between gap-4 px-5 py-3.5 hover:bg-neutral-50 transition-colors ${isActive ? 'bg-neutral-50' : ''}`}
+                      className={`flex items-start justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-soft ${isActive ? 'bg-soft' : ''}`}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[10px] tracking-widest uppercase font-bold text-accent">{hit.code}</span>
-                        <span className="block font-serif text-base md:text-lg font-bold leading-tight text-neutral-900 mt-0.5">{highlight(hit.title, query)}</span>
-                        <span className="block text-xs text-neutral-500 mt-1">{hit.programme.code} · {hit.programme.title}</span>
+                        <span className="block text-xs font-bold text-accent">{hit.code}</span>
+                        <span className="mt-0.5 block text-base font-semibold leading-tight text-ink md:text-lg">{highlight(hit.title, query)}</span>
+                        <span className="mt-1 block text-xs text-muted">{hit.programme.code} · {hit.programme.title}</span>
                       </span>
-                      <ArrowRight size={16} strokeWidth={1.5} className={`shrink-0 mt-2 ${isActive ? 'text-neutral-900' : 'text-neutral-300'}`} aria-hidden="true" />
+                      <ArrowRight size={16} strokeWidth={1.5} className={`mt-2 shrink-0 ${isActive ? 'text-ink' : 'text-muted/40'}`} aria-hidden="true" />
                     </Link>
                   </li>
                 )
               })}
             </ul>
           )}
-          <div className="border-t border-neutral-100 px-5 py-2.5 flex items-center justify-between text-[10px] tracking-widest uppercase font-medium text-neutral-400">
-            <span>{loading ? 'Searching cloud…' : `${hits.length} result${hits.length === 1 ? '' : 's'} from cloud`}</span>
-            <Link href={hits[0]?.href ?? '/search?q='+encodeURIComponent(query.trim())} className="hover:text-neutral-900 transition-colors">
-              View all →
+          <div className="flex items-center justify-between border-t border-line/70 px-5 py-2.5 text-xs font-medium text-muted">
+            <span>{loading ? 'Searching live courses...' : `${hits.length} course${hits.length === 1 ? '' : 's'}`}</span>
+            <Link href={hits[0]?.href ?? '/search?q='+encodeURIComponent(query.trim())} className="transition-colors hover:text-ink">
+              {hits[0] ? 'Open first' : 'Search page'}
             </Link>
           </div>
         </div>
@@ -186,7 +230,7 @@ function highlight(text: string, query: string) {
   const parts = text.split(new RegExp(`(${escaped})`, 'ig'))
   return parts.map((part, i) =>
     part.toLowerCase() === q.toLowerCase() ? (
-      <mark key={i} className="bg-yellow-100 text-neutral-900 px-0.5 rounded-sm">
+      <mark key={i} className="rounded bg-sheet px-0.5 text-ink">
         {part}
       </mark>
     ) : (

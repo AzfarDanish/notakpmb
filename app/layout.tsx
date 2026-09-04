@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import Script from 'next/script';
 import { Footer } from '@/components/Footer';
+import { FooterWordmark } from '@/components/FooterWordmark';
 import './globals.css';
 
 const sfProDisplay = localFont({
@@ -65,16 +66,16 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F9F8F6',
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${sfProDisplay.variable}`}>
-      <body className="bg-paper text-neutral-900 font-sans antialiased selection:bg-neutral-200 flex flex-col min-h-screen md:h-dvh md:overflow-hidden" suppressHydrationWarning>
+      <body className="bg-paper text-ink font-sans antialiased flex min-h-screen flex-col" suppressHydrationWarning>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:bg-ink focus:text-paper focus:px-4 focus:py-2 focus:text-xs focus:tracking-widest focus:uppercase focus:rounded-sm"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-2xl focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-paper"
         >
           Skip to content
         </a>
@@ -111,8 +112,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
             }),
           }}
         />
-        <div id="scroll-root" className="flex-1 md:min-h-0 md:overflow-y-auto md:flex md:flex-col">
+        <div id="scroll-root" className="flex flex-1 flex-col">
           <div className="flex-1 flex flex-col">{children}</div>
+          <FooterWordmark />
           <Footer />
         </div>
         <Analytics />

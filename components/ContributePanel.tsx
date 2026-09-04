@@ -94,9 +94,10 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="text-[10px] tracking-widest text-neutral-900 uppercase font-bold hover:opacity-60 transition-opacity flex items-center gap-2"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent"
       >
-        <span>+</span> CONTRIBUTE
+        <ArrowUp size={16} strokeWidth={1.8} />
+        Contribute a file
       </button>
 
       <AnimatePresence>
@@ -107,37 +108,39 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isPublished && setIsOpen(false)}
-              className="fixed inset-0 bg-white/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 z-40 bg-ink/10 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full md:w-[500px] bg-paper shadow-2xl z-50 flex flex-col"
+              className="fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[520px]"
             >
-              <div className="p-6 md:p-12 flex-1 overflow-y-auto">
-                <div className="flex items-center justify-between mb-12 md:mb-24">
-                  <span className="text-[10px] tracking-widest text-neutral-500 uppercase font-medium">
-                    CONTRIBUTE
-                  </span>
+              <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                <div className="mb-10 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-accent">New file</p>
+                    <h2 className="mt-1 text-3xl font-black tracking-tight text-ink">Share a note</h2>
+                  </div>
                   <button 
                     onClick={() => setIsOpen(false)}
                     disabled={isPublished}
-                    className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50"
+                    className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink disabled:opacity-50"
+                    aria-label="Close contribution panel"
                   >
                     <X size={20} strokeWidth={1.5} />
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-12">
+                <div className="flex flex-col gap-8">
                   <input 
                     type="text" 
-                    placeholder="Your note needs a title..." 
+                    placeholder="Title shown in the archive" 
                     value={title}
                     disabled={isPublished}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none font-serif text-4xl md:text-5xl italic placeholder:text-neutral-300 text-neutral-900 disabled:opacity-50"
+                    className="w-full rounded-3xl border border-line bg-white px-5 py-4 text-2xl font-black tracking-tight text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-ink disabled:opacity-50 md:text-3xl"
                   />
 
                   <div 
@@ -166,7 +169,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                     }}
                     role="button"
                     tabIndex={0}
-                    className={`border border-dashed ${isDragging ? 'border-neutral-900 bg-neutral-50/50' : error ? 'border-red-400 bg-red-50/50' : 'border-neutral-300 hover:bg-neutral-50/50'} rounded-sm p-8 md:p-12 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-colors mt-4 relative`}
+                    className={`relative mt-2 flex cursor-pointer flex-col items-center justify-center gap-4 rounded-[2rem] border border-dashed p-8 text-center transition-colors md:p-12 ${isDragging ? 'border-ink bg-white' : error ? 'border-red-400 bg-red-50' : 'border-line bg-sheet hover:bg-white'}`}
                   >
                     <input 
                       type="file" 
@@ -185,53 +188,53 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                     />
                     {file ? (
                       <>
-                        <div className="w-8 h-10 bg-accent rounded-sm flex items-center justify-center mb-2">
+                        <div className="mb-2 flex h-12 w-10 items-center justify-center rounded-xl bg-accent">
                           <FileText size={18} strokeWidth={2} className="text-white" />
                         </div>
-                        <p className="font-serif text-neutral-900 text-lg">
+                        <p className="text-lg font-semibold text-ink">
                           {file.name}
                         </p>
-                        <p className="text-[10px] tracking-widest text-neutral-500 uppercase">
+                        <p className="text-sm text-muted">
                           {(file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </>
                     ) : (
                       <>
-                        <div className="w-6 h-8 bg-neutral-400 rounded-sm flex items-center justify-center mb-2">
-                          <ArrowUp size={14} strokeWidth={3} className="text-white" />
+                        <div className="mb-2 flex h-12 w-10 items-center justify-center rounded-xl bg-ink">
+                          <ArrowUp size={16} strokeWidth={2.5} className="text-white" />
                         </div>
-                        <p className="font-serif text-neutral-600">
+                        <p className="text-lg font-semibold text-ink">
                           {isDragging ? 'Drop to select.' : 'Drag document here or browse.'}
                         </p>
-                        <p className="text-[10px] tracking-widest text-neutral-400 uppercase">
+                        <p className="text-sm text-muted">
                           PDF, DOC, DOCX, TXT up to 5MB
                         </p>
                       </>
                     )}
                   </div>
                   {error && (
-                    <p className="text-red-500 text-xs text-center">{error}</p>
+                    <p className="text-center text-sm text-red-600">{error}</p>
                   )}
                   {isPublished && (
-                    <p className="text-green-600 text-xs text-center">
-                      Contributed! The archive just grew. Thank you for sharing.
+                    <p className="text-center text-sm text-green-700">
+                      Uploaded. Refreshing the subject page...
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="p-6 md:p-12 border-t border-neutral-200/50">
+              <div className="border-t border-line p-6 md:p-10">
                 <button 
                   onClick={handlePublish}
                   disabled={!file || !title.trim() || isUploading || isPublished}
-                  className="w-full bg-ink text-white py-5 text-[10px] tracking-widest uppercase font-medium hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-ink py-4 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isUploading ? (
-                    <><Loader2 size={14} className="animate-spin" /> CONTRIBUTING...</>
+                    <><Loader2 size={14} className="animate-spin" /> Uploading...</>
                   ) : isPublished ? (
-                    <><Check size={14} /> CONTRIBUTED</>
+                    <><Check size={14} /> Uploaded</>
                   ) : (
-                    'CONTRIBUTE TO THE ARCHIVE'
+                    'Upload to archive'
                   )}
                 </button>
               </div>

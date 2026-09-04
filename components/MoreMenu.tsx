@@ -100,7 +100,7 @@ export function MoreMenu({
         aria-expanded={open}
         aria-label={label}
         title={label}
-        className="p-2 rounded-full transition-colors text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 cursor-pointer"
+        className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink"
       >
         <MoreHorizontal size={18} strokeWidth={1.5} />
       </button>
@@ -123,7 +123,7 @@ export function MoreMenu({
                   zIndex: 50,
                   visibility: pos ? 'visible' : 'hidden',
                 }}
-                className="min-w-40 bg-white border border-neutral-200 shadow-2xl rounded-sm py-2"
+                className="min-w-44 rounded-2xl border border-line bg-white py-2 shadow-[0_18px_60px_rgba(23,20,17,0.14)]"
               >
                 {items.map((item) => (
                   <button
@@ -133,10 +133,10 @@ export function MoreMenu({
                       setOpen(false);
                       item.onClick();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-[10px] tracking-widest uppercase font-medium text-left transition-colors cursor-pointer ${
+                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium transition-colors ${
                       item.danger
-                        ? 'text-red-500 hover:bg-red-50'
-                        : 'text-neutral-700 hover:bg-neutral-100'
+                        ? 'text-red-600 hover:bg-red-50'
+                        : 'text-ink hover:bg-soft'
                     }`}
                   >
                     {item.icon}

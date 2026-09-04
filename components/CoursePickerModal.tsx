@@ -23,11 +23,11 @@ function ModalCard({
   return (
     <div
       onClick={() => !disableClose && onClose()}
-      className="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white border border-neutral-200 shadow-2xl rounded-sm p-6 md:p-8 max-w-md w-full max-h-[85vh] overflow-auto"
+        className="max-h-[85vh] w-full max-w-md overflow-auto rounded-[2rem] border border-line bg-white p-6 shadow-[0_24px_90px_rgba(23,20,17,0.16)] md:p-8"
       >
         {children}
       </div>
@@ -120,13 +120,13 @@ export function CoursePickerModal({
     <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="font-serif text-2xl font-bold text-neutral-900">Add Subject</h3>
-          <p className="text-xs text-neutral-500 mt-1">Pick from the 36 Computer Science cloud courses</p>
+          <h3 className="text-2xl font-black tracking-tight text-ink">Add subject</h3>
+          <p className="mt-1 text-sm text-muted">Pick from the Computer Science cloud catalog.</p>
         </div>
         <button
           onClick={onClose}
           disabled={isSubmitting || success}
-          className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+          className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink disabled:opacity-50"
           aria-label="Close"
         >
           <X size={20} strokeWidth={1.5} />
@@ -134,23 +134,23 @@ export function CoursePickerModal({
       </div>
 
       {allAlreadyAdded ? (
-        <div className="border border-dashed border-neutral-200 rounded-sm px-4 py-8 text-center">
-          <p className="text-sm font-medium text-neutral-900">All 36 CS courses already added</p>
-          <p className="text-sm text-neutral-600 mt-2">
+        <div className="rounded-[2rem] bg-sheet px-4 py-8 text-center">
+          <p className="text-sm font-semibold text-ink">All CS courses already added</p>
+          <p className="mt-2 text-sm text-muted">
             Can&apos;t find yours? Type it in the confession group and tag{' '}
-            <span className="font-bold text-neutral-900">azferish</span> — we&apos;ll add it to the cloud.
+            <span className="font-bold text-ink">azferish</span> and we&apos;ll add it to the cloud.
           </p>
           <button
             onClick={onClose}
-            className="mt-6 px-6 py-2.5 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors rounded-sm cursor-pointer"
+            className="mt-6 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent"
           >
-            CLOSE
+            Close
           </button>
         </div>
       ) : (
         <>
           <div className="relative mb-4">
-            <Search size={16} strokeWidth={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" aria-hidden="true" />
+            <Search size={16} strokeWidth={1.5} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
             <input
               type="search"
               value={query}
@@ -159,22 +159,22 @@ export function CoursePickerModal({
                 setSelected(null)
                 setError('')
               }}
-              placeholder="Search code or name — e.g. CSC 1413, Database"
+              placeholder="Search code or name"
               autoFocus
               autoComplete="off"
-              className="w-full bg-transparent border border-neutral-300 rounded-sm pl-11 pr-10 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors"
+              className="w-full rounded-2xl border border-line bg-white py-3 pl-11 pr-10 text-sm transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none"
             />
-            {loading && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-neutral-400" />}
+            {loading && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-muted" />}
           </div>
 
           {/* Selected preview */}
           {selected && (
-            <div className="mb-4 border border-neutral-900 bg-neutral-50 rounded-sm px-4 py-3 flex items-center gap-3">
-              <span className="text-[10px] tracking-widest uppercase font-bold text-accent shrink-0">{selected.code}</span>
-              <span className="text-sm font-medium text-neutral-900 leading-tight">{selected.title}</span>
+            <div className="mb-4 flex items-center gap-3 rounded-2xl bg-sheet px-4 py-3">
+              <span className="shrink-0 text-xs font-bold text-accent">{selected.code}</span>
+              <span className="text-sm font-semibold leading-tight text-ink">{selected.title}</span>
               <button
                 onClick={() => setSelected(null)}
-                className="ml-auto text-neutral-400 hover:text-neutral-900 transition-colors"
+                className="ml-auto text-muted transition-colors hover:text-ink"
                 aria-label="Clear selection"
               >
                 <X size={16} />
@@ -183,22 +183,22 @@ export function CoursePickerModal({
           )}
 
           {/* Hits list */}
-          <div className="border border-neutral-200 rounded-sm max-h-[18rem] overflow-auto">
+          <div className="max-h-[18rem] overflow-auto rounded-2xl border border-line">
             {displayHits.length === 0 && !loading ? (
               <div className="px-4 py-8 text-center">
                 {query.trim().length >= 1 ? (
                   <>
-                    <p className="text-sm font-medium text-neutral-900">No course found for “{query.trim()}”</p>
-                    <p className="text-sm text-neutral-600 mt-2">
+                    <p className="text-sm font-semibold text-ink">No course found for “{query.trim()}”</p>
+                    <p className="mt-2 text-sm text-muted">
                       Can&apos;t find yours? Type it in the confession group and tag{' '}
-                      <span className="font-bold text-neutral-900">azferish</span>
+                      <span className="font-bold text-ink">azferish</span>
                     </p>
-                    <p className="text-xs text-neutral-400 mt-3">We&apos;ll verify and add it to the cloud catalog.</p>
+                    <p className="mt-3 text-xs text-muted">We&apos;ll verify and add it to the cloud catalog.</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-sm text-neutral-500">Type to search 36 CS courses by code or name.</p>
-                    <p className="text-xs text-neutral-400 mt-2">e.g. “Programming”, “CSC 1393”, “MPU”</p>
+                    <p className="text-sm text-muted">Type to search CS courses by code or name.</p>
+                    <p className="mt-2 text-xs text-muted">e.g. “Programming”, “CSC 1393”, “MPU”</p>
                   </>
                 )}
               </div>
@@ -211,11 +211,11 @@ export function CoursePickerModal({
                       <button
                         type="button"
                         onClick={() => setSelected(hit)}
-                        className={`w-full text-left px-4 py-3 flex items-start justify-between gap-3 hover:bg-neutral-50 transition-colors cursor-pointer ${isSelected ? 'bg-neutral-900 text-white hover:bg-neutral-900' : ''}`}
+                        className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-soft ${isSelected ? 'bg-ink text-paper hover:bg-ink' : ''}`}
                       >
                         <span className="min-w-0 flex-1">
-                          <span className={`block text-[10px] tracking-widest uppercase font-bold ${isSelected ? 'text-white' : 'text-accent'}`}>{hit.code}</span>
-                          <span className={`block text-sm font-medium leading-tight mt-0.5 ${isSelected ? 'text-white' : 'text-neutral-900'}`}>{hit.title}</span>
+                          <span className={`block text-xs font-bold ${isSelected ? 'text-paper' : 'text-accent'}`}>{hit.code}</span>
+                          <span className={`mt-0.5 block text-sm font-semibold leading-tight ${isSelected ? 'text-paper' : 'text-ink'}`}>{hit.title}</span>
                         </span>
                         {isSelected && <Check size={16} className="shrink-0 mt-1 text-white" />}
                       </button>
@@ -226,39 +226,39 @@ export function CoursePickerModal({
             )}
           </div>
 
-          <p className="text-[10px] tracking-widest uppercase font-medium text-neutral-400 mt-3">
-            {query.trim() ? `${displayHits.length} result${displayHits.length === 1 ? '' : 's'} from cloud` : 'Type to search — strict pick-only'}
-            {' · '}tag <span className="text-neutral-900">azferish</span> if missing
+          <p className="mt-3 text-xs font-medium text-muted">
+            {query.trim() ? `${displayHits.length} result${displayHits.length === 1 ? '' : 's'} from cloud` : 'Type to search. Strict pick-only.'}
+            {' · '}tag <span className="text-ink">azferish</span> if missing
           </p>
 
           {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-          {success && <p className="text-sm text-green-600 mt-3">Subject added — refreshing…</p>}
+          {success && <p className="mt-3 text-sm text-green-600">Subject added. Refreshing...</p>}
 
           <div className="flex items-center justify-end gap-4 mt-6">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting || success}
-              className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
             >
-              CANCEL
+              Cancel
             </button>
             <button
               type="button"
               onClick={handleAdd}
               disabled={!selected || isSubmitting || success}
-              className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" /> ADDING...
+                  <Loader2 size={14} className="animate-spin" /> Adding...
                 </>
               ) : success ? (
                 <>
-                  <Check size={14} /> ADDED
+                  <Check size={14} /> Added
                 </>
               ) : (
-                'ADD SUBJECT'
+                'Add subject'
               )}
             </button>
           </div>

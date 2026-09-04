@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowRight, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
 import { CoursePickerModal } from '@/components/CoursePickerModal';
@@ -40,74 +40,49 @@ export function SubjectList({
       )}
 
       {subjects.length > 0 && (
-        <div className="flex flex-col">
-          {Array.from(
-            { length: Math.ceil(subjects.length / 3) },
-            (_, rowIndex) => {
-              const row = subjects.slice(rowIndex * 3, rowIndex * 3 + 3);
-              return (
-                <div
-                  key={rowIndex}
-                  className="flex flex-col md:flex-row md:items-stretch gap-12 md:gap-x-12 border-b border-neutral-200"
-                >
-                  {row.map((subject, cardIndex) => (
-                    <div
-                      key={subject.id}
-                      className={`group flex flex-col gap-2 relative md:flex-1 md:min-w-0 ${
-                        rowIndex > 0 ? 'pt-6 md:pt-12' : ''
-                      } pb-6 md:pb-12 ${
-                        cardIndex < row.length - 1 ? 'md:border-r md:border-neutral-200' : ''
-                      }`}
-                    >
-                      <Link href={`/subject/${subject.id}`} className="flex flex-col gap-2 pr-8">
-                        <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
-                          {subject.code}
-                        </p>
-                        <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
-                          {subject.title}
-                        </h3>
-                      </Link>
-                      {canManage && (
-                        <div className="absolute top-0 right-0">
-                          <MoreMenu
-                            label={`Actions for ${subject.title}`}
-                            items={[
-                              {
-                                key: 'rename',
-                                label: 'Rename Subject',
-                                icon: <Pencil size={16} strokeWidth={1.5} />,
-                                onClick: () => setRenameSubject(subject),
-                              },
-                              {
-                                key: 'delete',
-                                label: 'Delete Subject',
-                                danger: true,
-                                icon: <Trash2 size={16} strokeWidth={1.5} />,
-                                onClick: () => setDeleteSubject(subject),
-                              },
-                            ]}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            },
-          )}
+        <div className="divide-y divide-line/70">
+          {subjects.map((subject) => (
+            <div key={subject.id} className="group flex items-center gap-4 py-4 transition-colors hover:px-4 hover:bg-soft md:py-5">
+              <Link href={`/subject/${subject.id}`} className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[8rem_1fr] sm:items-baseline">
+                <p className="text-sm font-bold text-accent">{subject.code}</p>
+                <h3 className="text-xl font-black tracking-tight text-ink text-balance md:text-2xl">
+                  {subject.title}
+                </h3>
+              </Link>
+              <ArrowRight size={18} strokeWidth={1.7} className="hidden text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink sm:block" />
+              {canManage && (
+                <MoreMenu
+                  label={`Actions for ${subject.title}`}
+                  items={[
+                    {
+                      key: 'rename',
+                      label: 'Rename subject',
+                      icon: <Pencil size={16} strokeWidth={1.7} />,
+                      onClick: () => setRenameSubject(subject),
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete subject',
+                      danger: true,
+                      icon: <Trash2 size={16} strokeWidth={1.7} />,
+                      onClick: () => setDeleteSubject(subject),
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          ))}
         </div>
       )}
 
       {canManage && (
-        <div className="mt-8 md:mt-12">
+        <div className="mt-8">
           <button
             onClick={() => setAddOpen(true)}
-            className="group flex items-center gap-4 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+            className="group inline-flex items-center gap-3 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent"
           >
-            <Plus size={18} strokeWidth={1.5} className="group-hover:rotate-90 transition-transform" />
-            <span className="font-serif text-2xl md:text-3xl font-bold">
-              Add Subject
-            </span>
+            <Plus size={18} strokeWidth={1.7} className="transition-transform group-hover:rotate-90" />
+            Add subject
           </button>
         </div>
       )}
@@ -183,14 +158,14 @@ function ModalCard({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={() => !disableClose && onClose()}
-        className="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm"
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white border border-neutral-200 shadow-2xl rounded-sm p-8 max-w-md w-full"
+          className="w-full max-w-md rounded-[2rem] border border-line bg-white p-6 shadow-[0_24px_90px_rgba(23,20,17,0.16)] md:p-8"
         >
           {children}
         </motion.div>
@@ -248,14 +223,14 @@ function AddSubjectModal({
     <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="font-serif text-2xl font-bold text-neutral-900">
-            Add Subject
+          <h3 className="text-2xl font-black tracking-tight text-ink">
+            Add subject
           </h3>
         </div>
         <button
           onClick={onClose}
           disabled={isSubmitting || success}
-          className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+            className="text-muted transition-colors hover:text-ink disabled:opacity-50"
           aria-label="Close"
         >
           <X size={20} strokeWidth={1.5} />
@@ -266,7 +241,7 @@ function AddSubjectModal({
         <div>
           <label
             htmlFor="subject-title"
-            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="mb-2 block text-sm font-semibold text-ink"
           >
             Subject title
           </label>
@@ -278,25 +253,25 @@ function AddSubjectModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Machine Learning"
             autoFocus
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
           />
         </div>
 
         <div>
           <label
             htmlFor="subject-code"
-            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="mb-2 block text-sm font-semibold text-ink"
           >
             Course code
           </label>
           <input
-id="subject-code"
+            id="subject-code"
             type="text"
             value={code}
             disabled={success}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="e.g. CSC 2853"
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm uppercase placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm uppercase transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
           />
         </div>
 
@@ -308,21 +283,21 @@ id="subject-code"
             type="button"
             onClick={onClose}
             disabled={isSubmitting || success}
-            className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
           >
-            CANCEL
+            Cancel
           </button>
           <button
             type="submit"
             disabled={!title.trim() || !code.trim() || isSubmitting || success}
-            className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
           >
             {isSubmitting ? (
-              <><Loader2 size={14} className="animate-spin" /> ADDING...</>
+              <><Loader2 size={14} className="animate-spin" /> Adding...</>
             ) : success ? (
-              <><Check size={14} /> ADDED</>
+              <><Check size={14} /> Added</>
             ) : (
-              'ADD SUBJECT'
+              'Add subject'
             )}
           </button>
         </div>
@@ -372,23 +347,23 @@ function DeleteSubjectModal({
 
   return (
     <ModalCard onClose={onClose} disableClose={isDeleting || success}>
-      <h3 className="font-serif text-2xl font-bold mb-2 text-neutral-900">
-        Delete Subject
+      <h3 className="mb-2 text-2xl font-black tracking-tight text-ink">
+        Delete subject
       </h3>
-      <p className="text-neutral-500 text-sm mb-2">
+      <p className="mb-2 text-sm text-muted">
         Are you sure you want to delete{' '}
-        <span className="font-medium text-neutral-900">&quot;{subject.title}&quot;</span>?
+        <span className="font-semibold text-ink">&quot;{subject.title}&quot;</span>?
       </p>
-      <p className="text-neutral-500 text-sm mb-6">
+      <p className="mb-6 text-sm text-muted">
         This will also permanently delete its uploaded files. This action cannot
         be undone.
       </p>
 
       <label
         htmlFor="delete-subject-confirm"
-        className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+        className="mb-2 block text-sm font-semibold text-ink"
       >
-        Type <span className="text-neutral-900">&quot;{subject.title}&quot;</span> to confirm
+        Type <span className="text-ink">&quot;{subject.title}&quot;</span> to confirm
       </label>
       <input
         id="delete-subject-confirm"
@@ -398,7 +373,7 @@ function DeleteSubjectModal({
         onChange={(e) => setTyped(e.target.value)}
         placeholder={subject.title}
         autoFocus
-        className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-300 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm transition-colors placeholder:text-muted/50 focus:border-ink focus:outline-none disabled:opacity-50"
       />
 
       {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
@@ -408,21 +383,21 @@ function DeleteSubjectModal({
         <button
           onClick={onClose}
           disabled={isDeleting || success}
-          className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+          className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
         >
-          CANCEL
+          Cancel
         </button>
         <button
           onClick={handleDelete}
           disabled={!matches || isDeleting || success}
-          className="px-6 py-3 bg-red-500 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+          className="flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-40"
         >
           {isDeleting ? (
-            <><Loader2 size={14} className="animate-spin" /> DELETING...</>
+            <><Loader2 size={14} className="animate-spin" /> Deleting...</>
           ) : success ? (
-            <><Check size={14} /> DELETED</>
+            <><Check size={14} /> Deleted</>
           ) : (
-            'DELETE SUBJECT'
+            'Delete subject'
           )}
         </button>
       </div>
@@ -477,13 +452,13 @@ function RenameSubjectModal({
   return (
     <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
       <div className="flex items-start justify-between mb-6">
-        <h3 className="font-serif text-2xl font-bold text-neutral-900">
-          Rename Subject
+        <h3 className="text-2xl font-black tracking-tight text-ink">
+          Rename subject
         </h3>
         <button
           onClick={onClose}
           disabled={isSubmitting || success}
-          className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+          className="text-muted transition-colors hover:text-ink disabled:opacity-50"
           aria-label="Close"
         >
           <X size={20} strokeWidth={1.5} />
@@ -494,7 +469,7 @@ function RenameSubjectModal({
         <div>
           <label
             htmlFor="rename-subject-title"
-            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="mb-2 block text-sm font-semibold text-ink"
           >
             Subject title
           </label>
@@ -506,14 +481,14 @@ function RenameSubjectModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder={subject.title}
             autoFocus
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
           />
         </div>
 
         <div>
           <label
             htmlFor="rename-subject-code"
-            className="block text-[10px] tracking-widest uppercase font-medium text-neutral-500 mb-2"
+            className="mb-2 block text-sm font-semibold text-ink"
           >
             Course code
           </label>
@@ -524,7 +499,7 @@ function RenameSubjectModal({
             disabled={success}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder={subject.code && subject.code.toUpperCase()}
-            className="w-full bg-transparent border border-neutral-300 rounded-sm px-4 py-3 text-sm uppercase placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm uppercase transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
           />
         </div>
 
@@ -536,21 +511,21 @@ function RenameSubjectModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting || success}
-            className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 cursor-pointer"
+            className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
           >
-            CANCEL
+            Cancel
           </button>
           <button
             type="submit"
             disabled={!title.trim() || !code.trim() || isSubmitting || success}
-            className="px-6 py-3 bg-neutral-900 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40 rounded-sm flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
           >
             {isSubmitting ? (
-              <><Loader2 size={14} className="animate-spin" /> RENAMING...</>
+              <><Loader2 size={14} className="animate-spin" /> Renaming...</>
             ) : success ? (
-              <><Check size={14} /> RENAMED</>
+              <><Check size={14} /> Renamed</>
             ) : (
-              'RENAME SUBJECT'
+              'Rename subject'
             )}
           </button>
         </div>

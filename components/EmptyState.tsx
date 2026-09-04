@@ -6,9 +6,9 @@ export function EmptyState({
   hint?: string
 }) {
   return (
-    <div className="border border-dashed border-neutral-300 rounded-sm p-8 text-center">
-      <p className="font-serif text-lg text-neutral-500">{title}</p>
-      {hint && <p className="text-xs text-neutral-400 mt-2">{hint}</p>}
+    <div className="rounded-[1.75rem] bg-sheet px-6 py-10 text-center md:px-10">
+      <p className="text-xl font-semibold tracking-tight text-ink">{title}</p>
+      {hint && <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">{hint}</p>}
     </div>
   )
 }

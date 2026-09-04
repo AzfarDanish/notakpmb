@@ -44,17 +44,12 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
 
   const totalFiles = documents.length;
 
-  const titleParts = subject.title.split(' ');
-  const formattedTitle = titleParts.length > 1 
-    ? <>{titleParts[0]}<br />{titleParts.slice(1).join(' ')}</>
-    : subject.title;
-
   return (
     <main
       id="main"
-      className="max-w-7xl mx-auto px-6 py-12 md:py-0 md:px-12 md:flex-1 md:min-h-0 md:flex md:flex-col md:overflow-hidden"
+      className="page-shell py-8 md:py-14"
     >
-      <div className="md:shrink-0 md:pt-12">
+      <div>
         <Breadcrumbs
           items={[
             { label: 'Index', href: '/' },
@@ -64,29 +59,25 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
         />
       </div>
 
-      <div className="mt-8 md:mt-12 flex flex-col md:flex-row gap-12 md:gap-32 relative md:flex-1 md:min-h-0">
-        <div className="md:w-1/3 flex flex-col md:min-h-0">
-          <div>
-            <p className="text-[10px] tracking-widest text-accent uppercase font-bold mb-4">
-              {subject.code}
-            </p>
-
-            <h1 className="font-serif font-bold tracking-tight leading-[1.1] mb-6 text-5xl md:text-[clamp(3rem,6vw,4.5rem)]">
-              {formattedTitle}
-            </h1>
-
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium">
-                {totalFiles} FILES
-              </p>
+      <div className="mt-10 grid gap-10 lg:grid-cols-[0.9fr_1.4fr] lg:gap-16">
+        <section className="lg:sticky lg:top-10 lg:h-fit">
+          <p className="text-sm font-bold text-accent">{subject.code}</p>
+          <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.92] tracking-[-0.06em] text-balance md:text-7xl">
+            {subject.title}
+          </h1>
+          <p className="mt-6 max-w-md text-base leading-7 text-muted">
+            {programme.title}
+          </p>
+          <div className="mt-8 rounded-[2rem] bg-sheet p-5">
+            <p className="text-4xl font-black tracking-tight text-ink">{totalFiles}</p>
+            <p className="mt-1 text-sm text-muted">Shared files</p>
+            <div className="mt-5">
               <ContributePanel subjectId={id} />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="md:w-2/3 flex flex-col gap-16 md:gap-20 mt-8 md:mt-0 md:min-h-0">
-          <DocumentSection title="FILES" items={documents} scrollable />
-        </div>
+        <DocumentSection title="Files" items={documents} />
       </div>
     </main>
   );

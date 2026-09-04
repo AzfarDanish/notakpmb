@@ -27,21 +27,21 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
           }}
         />
       )}
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] tracking-widest uppercase font-medium">
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-muted">
         {items.map((item, index) => {
           const isLast = index === items.length - 1
           return (
             <li key={index} className="flex items-center gap-2">
               {index > 0 && (
                 <span aria-hidden="true" className="text-neutral-300">
-                  /
+                  →
                 </span>
               )}
               {isLast || !item.href ? (
                 <span
                   aria-current={isLast ? 'page' : undefined}
                   className={
-                    isLast ? 'text-neutral-900' : 'text-neutral-500'
+                    isLast ? 'text-ink' : 'text-muted'
                   }
                 >
                   {item.label}
@@ -49,7 +49,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
               ) : (
                 <Link
                   href={item.href}
-                  className="text-neutral-500 hover:text-neutral-900 transition-colors"
+                  className="text-muted transition-colors hover:text-ink"
                 >
                   {item.label}
                 </Link>

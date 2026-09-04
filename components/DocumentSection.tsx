@@ -79,84 +79,84 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
   };
 
   return (
-    <section className={scrollable ? 'flex flex-col flex-1 min-h-0' : undefined}>
-      <h3 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4 shrink-0">
+    <section className={scrollable ? 'flex min-h-0 flex-1 flex-col' : undefined}>
+      <h3 className="mb-5 text-xl font-black tracking-tight text-ink md:mb-6">
         {title}
       </h3>
       {isEmpty && (
-        <div className="border border-dashed border-neutral-300 rounded-sm p-8 text-center">
-          <p className="font-serif text-lg text-neutral-500">
+        <div className="rounded-[2rem] bg-sheet p-8 text-center">
+          <p className="text-xl font-semibold tracking-tight text-ink">
             Nothing here yet
           </p>
-          <p className="text-xs text-neutral-400 mt-2">
-            Every archive begins with one contribution. Be the first. The note you share might save a classmate.
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Be the first to share a useful note for this subject.
           </p>
         </div>
       )}
       {!isEmpty && (
-        <div className={`flex flex-col gap-6 md:gap-8 ${scrollable ? 'flex-1 min-h-0 overflow-y-auto md:pr-2 md:pb-12' : ''}`}>
-        {items.map((item) => (
-          <div key={item.id} className="flex items-center justify-between gap-4 group">
-            <button 
-              onClick={() => setPreviewItem({
-                url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
-                title: item.title,
-                downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
-                kind: getFileKind(item.originalName || item.title),
-              })}
-              className="flex-1 text-left cursor-pointer"
-            >
-              <h4 className="font-serif text-xl md:text-2xl group-hover:opacity-60 transition-opacity">
-                {item.title}
-              </h4>
-              {item.originalName && (
-                <p className="text-xs text-neutral-400 mt-1 font-mono">
-                  {item.originalName}
-                </p>
-              )}
-            </button>
-            <div className="flex items-center gap-4 text-sm text-neutral-500 shrink-0">
-              <span className="w-24 text-right hidden sm:block">{item.date}</span>
-              <span className="w-16 text-right hidden sm:block">{item.size}</span>
+        <div className={`divide-y divide-line/70 ${scrollable ? 'min-h-0 flex-1 overflow-y-auto md:pr-2 md:pb-12' : ''}`}>
+          {items.map((item) => (
+            <div key={item.id} className="group flex items-center justify-between gap-4 py-4 transition-colors hover:px-4 hover:bg-soft md:py-5">
+              <button
+                onClick={() => setPreviewItem({
+                  url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
+                  title: item.title,
+                  downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
+                  kind: getFileKind(item.originalName || item.title),
+                })}
+                className="min-w-0 flex-1 text-left"
+              >
+                <h4 className="text-xl font-black tracking-tight text-ink text-balance md:text-2xl">
+                  {item.title}
+                </h4>
+                {item.originalName && (
+                  <p className="mt-1 truncate font-mono text-xs text-muted">
+                    {item.originalName}
+                  </p>
+                )}
+              </button>
+              <div className="flex shrink-0 items-center gap-4 text-sm text-muted">
+                <span className="hidden w-24 text-right sm:block">{item.date}</span>
+                <span className="hidden w-16 text-right sm:block">{item.size}</span>
 
-              {item.key && (
-                <MoreMenu
-                  label={`Actions for ${item.title}`}
-                  items={[
-                    {
-                      key: 'preview',
-                      label: 'Preview',
-                      icon: <Eye size={16} strokeWidth={1.5} />,
-                      onClick: () =>
-                        setPreviewItem({
-                          url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
-                          title: item.title,
-                          downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
-                          kind: getFileKind(item.originalName || item.title),
-                        }),
-                    },
-                    {
-                      key: 'download',
-                      label: 'Download',
-                      icon: <Download size={16} strokeWidth={1.5} />,
-                      onClick: () => {
-                        window.location.href = `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`;
+                {item.key && (
+                  <MoreMenu
+                    label={`Actions for ${item.title}`}
+                    items={[
+                      {
+                        key: 'preview',
+                        label: 'Preview',
+                        icon: <Eye size={16} strokeWidth={1.5} />,
+                        onClick: () =>
+                          setPreviewItem({
+                            url: `/api/download?key=${encodeURIComponent(item.key)}&action=preview`,
+                            title: item.title,
+                            downloadUrl: `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`,
+                            kind: getFileKind(item.originalName || item.title),
+                          }),
                       },
-                    },
-                    {
-                      key: 'delete',
-                      label: 'Delete',
-                      danger: true,
-                      icon: <Trash2 size={16} strokeWidth={1.5} />,
-                      onClick: () => setDeleteItem({ key: item.key, title: item.title }),
-                    },
-                  ]}
-                />
-              )}
+                      {
+                        key: 'download',
+                        label: 'Download',
+                        icon: <Download size={16} strokeWidth={1.5} />,
+                        onClick: () => {
+                          window.location.href = `/api/download?key=${encodeURIComponent(item.key)}&action=download&filename=${encodeURIComponent(item.originalName || 'download')}`;
+                        },
+                      },
+                      {
+                        key: 'delete',
+                        label: 'Delete',
+                        danger: true,
+                        icon: <Trash2 size={16} strokeWidth={1.5} />,
+                        onClick: () => setDeleteItem({ key: item.key, title: item.title }),
+                      },
+                    ]}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
 
       <AnimatePresence>
@@ -167,32 +167,32 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setPreviewItem(null)}
-              className="fixed inset-0 bg-white/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 z-40 bg-ink/10 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full md:w-[800px] bg-paper shadow-2xl z-50 flex flex-col"
+              className="fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[min(900px,78vw)]"
             >
-              <div className="p-6 md:p-12 flex flex-col h-full">
-                <div className="flex items-center justify-between gap-4 mb-6 md:mb-8 shrink-0">
-                  <span className="text-[10px] tracking-widest text-neutral-500 uppercase font-medium truncate pr-2">
-                    PREVIEW &middot; {previewItem.title}
+              <div className="flex h-full flex-col p-4 md:p-8">
+                <div className="mb-5 flex shrink-0 items-center justify-between gap-4">
+                  <span className="truncate pr-2 text-lg font-black tracking-tight text-ink">
+                    {previewItem.title}
                   </span>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex shrink-0 items-center gap-3">
                     <a
                       href={previewItem.downloadUrl}
-                      className="flex items-center gap-2 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+                      className="flex items-center gap-2 rounded-full bg-sheet px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-white"
                       title="Download"
                     >
                       <Download size={16} strokeWidth={1.5} />
-                      DOWNLOAD
+                      Download
                     </a>
                     <button 
                       onClick={() => setPreviewItem(null)}
-                      className="text-neutral-400 hover:text-neutral-900 transition-colors"
+                      className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink"
                       aria-label="Close preview"
                     >
                       <X size={20} strokeWidth={1.5} />
@@ -200,7 +200,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                   </div>
                 </div>
 
-                <div className={`flex-1 bg-white rounded-sm border border-neutral-200 overflow-hidden relative shadow-inner ${previewItem.kind === 'native' ? '' : 'flex flex-col'}`}>
+                <div className={`relative flex-1 overflow-hidden rounded-[1.5rem] border border-line bg-white ${previewItem.kind === 'native' ? '' : 'flex flex-col'}`}>
                   {previewItem.kind === 'docx' && (
                     <DocxPreview url={previewItem.url} title={previewItem.title} />
                   )}
@@ -229,18 +229,18 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isDeleting && !deleteSuccess && setDeleteItem(null)}
-              className="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm"
             >
               <motion.div 
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white border border-neutral-200 shadow-2xl rounded-sm p-8 max-w-md w-full"
+                className="w-full max-w-md rounded-[2rem] border border-line bg-white p-6 shadow-[0_24px_90px_rgba(23,20,17,0.16)] md:p-8"
               >
-                <h3 className="font-serif text-2xl font-bold mb-2 text-neutral-900">Delete Document</h3>
-                <p className="text-neutral-500 text-sm mb-8">
-                  Are you sure you want to delete <span className="font-medium text-neutral-900">&quot;{deleteItem.title}&quot;</span>? This action cannot be undone.
+                <h3 className="mb-2 text-2xl font-black tracking-tight text-ink">Delete document</h3>
+                <p className="mb-8 text-sm leading-6 text-muted">
+                  Delete <span className="font-semibold text-ink">&quot;{deleteItem.title}&quot;</span>? This cannot be undone.
                 </p>
 
                 {deleteError && (
@@ -254,16 +254,16 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                   <button 
                     onClick={() => setDeleteItem(null)}
                     disabled={isDeleting || deleteSuccess}
-                    className="px-6 py-3 text-[10px] tracking-widest uppercase font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
+                    className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
                   >
-                    CANCEL
+                    Cancel
                   </button>
                   <button 
                     onClick={handleDelete}
                     disabled={isDeleting || deleteSuccess}
-                    className="px-6 py-3 bg-red-500 text-white text-[10px] tracking-widest uppercase font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2 rounded-sm"
+                    className="flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                   >
-                    {isDeleting ? <><Loader2 size={14} className="animate-spin" /> DELETING...</> : deleteSuccess ? <><Check size={14} /> DELETED</> : 'DELETE'}
+                    {isDeleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : deleteSuccess ? <><Check size={14} /> Deleted</> : 'Delete'}
                   </button>
                 </div>
               </motion.div>

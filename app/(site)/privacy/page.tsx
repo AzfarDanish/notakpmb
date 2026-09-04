@@ -10,14 +10,15 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main id="main" className="max-w-3xl mx-auto px-6 py-12 md:py-16 md:px-12">
+    <main id="main" className="page-shell py-8 md:py-14">
       <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Privacy Policy' }]} />
 
-      <p className="text-[10px] tracking-widest text-accent uppercase font-bold mt-8">Legal</p>
-      <h1 className="font-serif text-4xl md:text-5xl font-bold tracking-tight mt-2">Privacy Policy for NotaKPMB</h1>
-      <p className="text-sm text-neutral-500 mt-4">Last updated: 4 September 2026</p>
+      <article className="mt-10 max-w-3xl">
+        <p className="text-sm font-bold text-accent">Legal</p>
+        <h1 className="mt-2 text-5xl font-black leading-[0.95] tracking-[-0.05em] text-balance md:text-6xl">Privacy Policy for NotaKPMB</h1>
+        <p className="mt-4 text-sm text-muted">Last updated: 4 September 2026</p>
 
-      <div className="prose prose-neutral max-w-none mt-10 space-y-10 text-sm leading-relaxed text-neutral-700 prose-headings:font-serif prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-neutral-900 prose-a:text-accent prose-a:underline">
+        <div className="mt-10 space-y-10 text-sm leading-7 text-muted [&_a]:text-accent [&_a]:underline [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:tracking-tight [&_h2]:text-ink [&_strong]:font-bold [&_strong]:text-ink [&_ul]:list-disc [&_ul]:pl-6">
         <p>
           NotaKPMB (“we,” “us,” “the Site”) is a student-run, non-commercial digital archive of notes, exercises, and past year questions for KPMB students, created
           and maintained by Azfar Danish. This Privacy Policy explains what information is collected when you use the Site and how it is handled.
@@ -150,7 +151,8 @@ export default function PrivacyPage() {
             </a>
           </p>
         </section>
-      </div>
+        </div>
+      </article>
     </main>
   )
 }

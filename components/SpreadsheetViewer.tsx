@@ -70,7 +70,7 @@ export function SpreadsheetViewer({ url }: { url: string }) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="shrink-0 px-8 md:px-10 pt-6 pb-4">
-        <p className="text-[10px] tracking-widest uppercase text-neutral-400 font-medium">
+        <p className="text-xs font-semibold text-muted">
           {state.sheetName}
         </p>
       </div>

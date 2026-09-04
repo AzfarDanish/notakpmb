@@ -49,7 +49,7 @@ export function SearchInput({
       <Search
         size={isLarge ? 20 : 16}
         strokeWidth={1.5}
-        className="absolute left-4 text-neutral-400 pointer-events-none"
+        className="pointer-events-none absolute left-4 text-muted"
         aria-hidden="true"
       />
       <input
@@ -57,15 +57,15 @@ export function SearchInput({
         type="search"
         name="q"
         defaultValue=""
-        placeholder="Search programmes & subjects"
+        placeholder="Search files, subjects, programmes"
         aria-label="Search programmes and subjects"
         autoFocus={autoFocus}
-        className={`w-full bg-transparent border border-neutral-300 rounded-full pl-11 ${
-          isLarge ? 'pr-16 py-4 text-base' : 'pr-12 py-2.5 text-sm'
-        } placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 transition-colors`}
+        className={`w-full rounded-2xl border border-line bg-white/70 pl-11 text-ink shadow-none transition-colors placeholder:text-muted/60 focus:border-ink focus:bg-white focus:outline-none ${
+          isLarge ? 'py-4 pr-16 text-base' : 'py-3 pr-12 text-sm'
+        }`}
       />
       <kbd
-        className={`absolute right-4 hidden sm:block text-[10px] tracking-widest uppercase text-neutral-400 border border-neutral-300 rounded px-1.5 py-0.5 ${
+        className={`absolute right-4 hidden rounded-md border border-line bg-soft px-1.5 py-0.5 text-[10px] font-semibold text-muted sm:block ${
           isLarge ? 'text-xs' : ''
         }`}
       >

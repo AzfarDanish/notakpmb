@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { searchArchiveWithCustom, getSubjectWithCustom } from '@/lib/subjects';
-import { searchFiles } from '@/lib/r2';
-import { SearchInput } from '@/components/SearchInput';
+import { ArrowRight } from 'lucide-react';
+import { searchArchiveWithCustom } from '@/lib/subjects';
 import { CourseLookup } from '@/components/CourseLookup';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { EmptyState } from '@/components/EmptyState';
@@ -23,132 +22,91 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
   const results = query ? await searchArchiveWithCustom(query) : null;
-  const files = query ? await searchFiles(query) : null;
-
-  const fileContexts = files?.length
-    ? await Promise.all(
-        files.map(async (file) => ({
-          file,
-          context: await getSubjectWithCustom(file.subjectId),
-        })),
-      )
-    : [];
-
-  const visibleFiles = fileContexts.filter(
-    (entry): entry is typeof entry & { context: NonNullable<typeof entry.context> } =>
-      Boolean(entry.context),
-  );
 
   return (
-    <main id="main" className="max-w-7xl mx-auto px-6 py-12 md:py-16 md:px-12">
+    <main id="main" className="page-shell py-8 md:py-14">
       <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Search' }]} />
 
-      <div className="mt-8 md:mt-12 max-w-2xl">
-        <h1 className="font-serif text-5xl md:text-7xl font-bold tracking-tight">
-          Search
-        </h1>
-        <div className="mt-8 flex flex-col gap-6">
-          <CourseLookup size="lg" autoFocus placeholder="Type subject name — instantly shows code (cloud)" />
-          <div className="flex items-center gap-3 text-[10px] tracking-widest uppercase font-medium text-neutral-400">
-            <span className="h-px flex-1 bg-neutral-200" />
-            <span>or classic search (programmes, files)</span>
-            <span className="h-px flex-1 bg-neutral-200" />
-          </div>
-          <SearchInput size="lg" />
-        </div>
-      </div>
-
-      <div className="mt-12 md:mt-20 max-w-3xl">
-        {!query && (
-          <p className="text-sm text-neutral-500">
-            Search by subject title, course code, or file name. For
-            example &ldquo;database&rdquo; or &ldquo;CSC 1413&rdquo;. Can&rsquo;t find
-            a topic? Be the first to contribute it.
+      <div className="mt-10 grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <section>
+          <h1 className="max-w-xl text-5xl font-black leading-[0.9] tracking-[-0.06em] text-balance md:text-7xl">
+            Search courses.
+          </h1>
+          <p className="mt-6 max-w-md text-base leading-7 text-muted">
+            Type a course name or code. Results appear as you type from the live catalog.
           </p>
-        )}
+          <div className="mt-8 rounded-[2rem] bg-sheet p-3 md:p-4">
+            <CourseLookup size="lg" autoFocus placeholder="Course name or code" />
+          </div>
+        </section>
 
-        {query && results && files &&
-          results.programmes.length === 0 &&
-          results.subjects.length === 0 &&
-          files.length === 0 && (
-          <EmptyState
-            title={`No results for "${query}"`}
-            hint="It might not exist yet. You could be the one to start it."
-          />
-        )}
-
-        {query && results && results.programmes.length > 0 && (
-          <section className="mb-14">
-            <h2 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
-              Programmes
-            </h2>
-            <div className="flex flex-col gap-6 md:gap-8">
-              {results.programmes.map((programme) => (
-                <Link
-                  key={programme.id}
-                  href={`/programme/${programme.id}`}
-                  className="group"
-                >
-                  <p className="text-[10px] tracking-widest text-accent uppercase font-bold">
-                    {programme.code}
-                  </p>
-                  <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
-                    {programme.title}
-                  </h3>
-                </Link>
-              ))}
+        <section className="lg:pt-2">
+          {!query && (
+            <div className="rounded-[2rem] bg-soft p-8">
+              <p className="text-2xl font-black tracking-tight text-ink">Start with a word you remember.</p>
+              <p className="mt-3 max-w-md text-sm leading-6 text-muted">
+                Try “database”, “CSC 1413”, or the filename your lecturer shared.
+              </p>
             </div>
-          </section>
-        )}
+          )}
 
-        {query && results && results.subjects.length > 0 && (
-          <section>
-            <h2 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
-              Subjects
-            </h2>
-            <div className="flex flex-col gap-6 md:gap-8">
-              {results.subjects.map(({ subject, programme }) => (
-                <Link
-                  key={subject.id}
-                  href={`/subject/${subject.id}`}
-                  className="group"
-                >
-                  <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
-                    {subject.title}
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    {subject.code} · {programme.code}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+          {query && results &&
+            results.programmes.length === 0 &&
+            results.subjects.length === 0 && (
+            <EmptyState
+              title={`No results for "${query}"`}
+              hint="Try a shorter course name or a code such as CSC 1413."
+            />
+          )}
 
-        {visibleFiles.length > 0 && (
-          <section className="mt-14">
-            <h2 className="text-[10px] tracking-widest text-neutral-400 uppercase font-medium mb-6 md:mb-8 border-b border-neutral-200 pb-4">
-              Files
-            </h2>
-            <div className="flex flex-col gap-6 md:gap-8">
-              {visibleFiles.map(({ file, context }) => (
-                <Link
-                  key={file.key}
-                  href={`/subject/${file.subjectId}`}
-                  className="group"
-                >
-                  <h3 className="font-serif text-2xl md:text-3xl font-bold group-hover:opacity-60 transition-opacity">
-                    {file.title}
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    {file.originalName} · {context.subject.title} ·{' '}
-                    {context.programme.code}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+          {query && results && results.programmes.length > 0 && (
+            <section className="mb-12">
+              <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Programmes</h2>
+              <div className="divide-y divide-line/70">
+                {results.programmes.map((programme) => (
+                  <Link
+                    key={programme.id}
+                    href={`/programme/${programme.id}`}
+                    className="group flex items-center justify-between gap-4 py-4 transition-colors hover:px-4 hover:bg-soft"
+                  >
+                    <span>
+                      <span className="block text-xs font-bold text-accent">{programme.code}</span>
+                      <span className="mt-1 block text-xl font-black tracking-tight text-ink">
+                        {programme.title}
+                      </span>
+                    </span>
+                    <ArrowRight size={18} className="text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {query && results && results.subjects.length > 0 && (
+            <section className="mb-12">
+              <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Subjects</h2>
+              <div className="divide-y divide-line/70">
+                {results.subjects.map(({ subject, programme }) => (
+                  <Link
+                    key={subject.id}
+                    href={`/subject/${subject.id}`}
+                    className="group flex items-center justify-between gap-4 py-4 transition-colors hover:px-4 hover:bg-soft"
+                  >
+                    <span>
+                      <span className="block text-xl font-black tracking-tight text-ink">
+                        {subject.title}
+                      </span>
+                      <span className="mt-1 block text-sm text-muted">
+                        {subject.code} · {programme.code}
+                      </span>
+                    </span>
+                    <ArrowRight size={18} className="text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </section>
       </div>
     </main>
   );

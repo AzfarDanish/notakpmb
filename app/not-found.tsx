@@ -12,23 +12,21 @@ export default function NotFound() {
   return (
     <main
       id="main"
-      className="max-w-7xl mx-auto px-6 py-24 md:px-12 min-h-[70vh] flex flex-col items-start justify-center"
+      className="page-shell flex min-h-[70vh] flex-col items-start justify-center py-24"
     >
-      <p className="text-[10px] tracking-widest text-accent uppercase font-bold mb-4">
-        404
-      </p>
-      <h1 className="font-serif text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] max-w-4xl">
+      <p className="mb-4 text-sm font-bold text-accent">404</p>
+      <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-[-0.06em] text-balance md:text-7xl">
         This page doesn&rsquo;t exist.
       </h1>
-      <p className="text-neutral-600 leading-relaxed text-sm md:text-base max-w-xl mt-6">
+      <p className="mt-6 max-w-xl text-base leading-7 text-muted">
         The page you&rsquo;re looking for may have been moved or removed. Head
         back to the archive to keep exploring.
       </p>
       <Link
         href="/"
-        className="mt-10 inline-flex items-center gap-2 text-xs tracking-widest uppercase font-bold text-accent hover:opacity-60 transition-opacity"
+        className="mt-10 inline-flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent"
       >
-        Back to the archive
+        Open the archive
       </Link>
     </main>
   );
