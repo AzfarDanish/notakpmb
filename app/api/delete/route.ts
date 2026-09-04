@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client } from '@/lib/r2';
 
@@ -19,6 +20,8 @@ export async function DELETE(req: NextRequest) {
     });
 
     await client.send(command);
+
+    revalidateTag('r2-files', 'max');
 
     return NextResponse.json({ success: true });
   } catch (error) {

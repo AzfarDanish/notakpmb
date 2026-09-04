@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { PreviewSkeleton } from '@/components/Skeleton';
 
 export function ImageViewer({ url, title }: { url: string; title: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -13,16 +13,15 @@ export function ImageViewer({ url, title }: { url: string; title: string }) {
         <img
           src={url}
           alt={`Preview of ${title}`}
+          loading="lazy"
+          decoding="async"
           onLoad={() => setStatus('ready')}
           onError={() => setStatus('error')}
           className={`max-w-full max-h-full object-contain ${status === 'loading' ? 'opacity-0' : ''}`}
         />
       </div>
       {status === 'loading' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-neutral-400 pointer-events-none">
-          <Loader2 size={20} className="animate-spin" />
-          <p className="text-sm">Loading image&hellip;</p>
-        </div>
+        <div className="pointer-events-none absolute inset-0 flex"><PreviewSkeleton label="Loading image preview" /></div>
       )}
       {status === 'error' && (
         <div className="absolute inset-0 flex items-center justify-center text-center p-8 text-neutral-500">

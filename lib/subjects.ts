@@ -2,10 +2,13 @@ import {
   DeleteObjectsCommand,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { getR2Client } from '@/lib/r2';
 import { d1Or, queryD1 } from '@/lib/d1';
 import {
   getProgramme as getStaticProgramme,
+  getProgrammes as getStaticProgrammes,
   getSubject as getStaticSubject,
   searchArchive as staticSearchArchive,
   type Programme,
@@ -32,11 +35,13 @@ type SubjectRow = {
   programmeId: string | null
 }
 
+const D1_CACHE_SECONDS = 60;
+
 function kindId(kind: SubjectKind, subjectId: string): string {
   return kind === 'custom' ? subjectId : `${kind}:${subjectId}`
 }
 
-async function listSubjectRows(): Promise<SubjectRow[]> {
+async function readSubjectRows(): Promise<SubjectRow[]> {
   const res = await queryD1(
     'SELECT id, subject_id, kind, title, code, programme_id FROM subjects',
   );
@@ -51,6 +56,13 @@ async function listSubjectRows(): Promise<SubjectRow[]> {
         : String(r.programme_id),
   }));
 }
+
+const listSubjectRows = cache(
+  unstable_cache(readSubjectRows, ['subject-delta-rows'], {
+    revalidate: D1_CACHE_SECONDS,
+    tags: ['subjects'],
+  }),
+);
 
 function partitionRows(rows: SubjectRow[]): {
   customSubjects: ManagedSubject[]
@@ -110,8 +122,8 @@ async function loadDeltas() {
   return listSubjectRows();
 }
 
-export async function getProgrammes(): Promise<Programme[]> {
-  const fallback = await getCloudProgrammesWithCourses();
+export const getProgrammes = cache(async (): Promise<Programme[]> => {
+  const fallback = getStaticProgrammes().map((p) => ({ ...p, subjects: [] }));
   return d1Or(async () => {
     const [cloudProgrammes, deltaRows] = await Promise.all([
       getCloudProgrammesWithCourses(),
@@ -119,26 +131,24 @@ export async function getProgrammes(): Promise<Programme[]> {
     ]);
     return cloudProgrammes.map((p) => withDeltas(p, deltaRows));
   }, fallback);
-}
+});
 
-export async function getProgramme(id: string): Promise<Programme | undefined> {
-  const fallbackProgrammes = await getCloudProgrammesWithCourses();
-  const fallback = fallbackProgrammes.find((p) => p.id === id) ?? getStaticProgramme(id);
-  if (!fallback) return undefined;
+export const getProgramme = cache(async (id: string): Promise<Programme | undefined> => {
+  const fallback = getStaticProgramme(id);
   return d1Or(async () => {
     const [cloudProgrammes, deltaRows] = await Promise.all([
       getCloudProgrammesWithCourses(),
       loadDeltas(),
     ]);
     const programme = cloudProgrammes.find((p) => p.id === id);
-    if (!programme) return undefined;
+    if (!programme) return fallback ? withDeltas(fallback, deltaRows) : undefined;
     return withDeltas(programme, deltaRows);
-  }, fallback ? withDeltas(fallback, []) : fallback);
-}
+  }, fallback ? withDeltas(fallback, []) : undefined);
+});
 
-export async function getSubjectsForProgramme(
+export const getSubjectsForProgramme = cache(async (
   programmeId: string,
-): Promise<Subject[]> {
+): Promise<Subject[]> => {
   // START EMPTY: programme subjects come only from ledger (custom adds via UI), not from catalog.
   // Catalog (courses) is pick-list for the picker, not auto-enrolled.
   const fallback: Subject[] = [];
@@ -153,20 +163,20 @@ export async function getSubjectsForProgramme(
     };
     return withDeltas(base, deltaRows).subjects;
   }, fallback);
-}
+});
 
-export async function getSubjectWithCustom(
+export const getSubjectWithCustom = cache(async (
   id: string,
-): Promise<SubjectContext | undefined> {
-  const cloudFallback = await getCloudCourse(id);
-  const fallback = cloudFallback ?? getStaticSubject(id);
+): Promise<SubjectContext | undefined> => {
+  const fallback = getStaticSubject(id);
   return d1Or(async () => {
-    const deltaRows = await loadDeltas();
+    const [deltaRows, cloudCtx] = await Promise.all([
+      loadDeltas(),
+      getCloudCourse(id),
+    ]);
     const { customSubjects, renames, deletedIds } = partitionRows(deltaRows);
     if (deletedIds.has(id)) return undefined;
 
-    // Try cloud catalog first
-    const cloudCtx = await getCloudCourse(id);
     if (cloudCtx) {
       return {
         subject: applyRename(cloudCtx.subject, renames),
@@ -193,7 +203,7 @@ export async function getSubjectWithCustom(
       programme,
     };
   }, fallback);
-}
+});
 
 export async function addSubject(input: {
   programmeId: string
@@ -311,10 +321,10 @@ export async function deleteSubject(id: string): Promise<{ deletedFiles: number 
   return { deletedFiles };
 }
 
-export async function searchArchiveWithCustom(query: string): Promise<{
+export const searchArchiveWithCustom = cache(async (query: string): Promise<{
   programmes: SubjectContext['programme'][]
   subjects: SubjectContext[]
-}> {
+}> => {
   const fallbackStatic = staticSearchArchive(query);
   const fallback: { programmes: Programme[]; subjects: SubjectContext[] } = {
     programmes: fallbackStatic.programmes,
@@ -324,31 +334,35 @@ export async function searchArchiveWithCustom(query: string): Promise<{
   if (!q) return { programmes: [], subjects: [] };
 
   return d1Or(async () => {
-    const deltaRows = await loadDeltas();
+    const [deltaRows, cloudSubjects, cloudProgrammes] = await Promise.all([
+      loadDeltas(),
+      searchCloudCourses(query, 20),
+      getCloudProgrammesWithCourses(),
+    ]);
     const { customSubjects, renames, deletedIds } = partitionRows(deltaRows);
 
-    // Start from cloud course search
-    const cloudSubjects = await searchCloudCourses(query, 20);
     const subjects = cloudSubjects
       .filter(({ subject }) => !deletedIds.has(subject.id))
       .map((ctx) => ({ ...ctx, subject: applyRename(ctx.subject, renames) }));
 
     // Include renamed courses that now match but original didn't
-    for (const [subjectId, rename] of renames) {
-      if (deletedIds.has(subjectId)) continue;
-      if (
-        rename.title.toLowerCase().includes(q) ||
-        (rename.code ?? '').toLowerCase().includes(q)
-      ) {
-        if (subjects.some((s) => s.subject.id === subjectId)) continue;
-        const ctx = (await getCloudCourse(subjectId)) ?? getStaticSubject(subjectId);
-        if (ctx) {
-          subjects.push({
-            subject: applyRename(ctx.subject, renames),
-            programme: ctx.programme,
-          });
-        }
-      }
+    const renamedMatches = await Promise.all(
+      Array.from(renames.entries()).map(async ([subjectId, rename]) => {
+        if (deletedIds.has(subjectId)) return null;
+        if (
+          !rename.title.toLowerCase().includes(q) &&
+          !(rename.code ?? '').toLowerCase().includes(q)
+        ) return null;
+        if (subjects.some((s) => s.subject.id === subjectId)) return null;
+        return (await getCloudCourse(subjectId)) ?? getStaticSubject(subjectId) ?? null;
+      }),
+    );
+    for (const ctx of renamedMatches) {
+      if (!ctx) continue;
+      subjects.push({
+        subject: applyRename(ctx.subject, renames),
+        programme: ctx.programme,
+      });
     }
 
     // Add legacy static results not in cloud
@@ -375,8 +389,8 @@ export async function searchArchiveWithCustom(query: string): Promise<{
     }
 
     const { programmes: programmeMatches } = staticResults;
-    const programmesD1 = await getProgrammes();
-    const programmes = programmesD1.filter(
+    const programmesWithDeltas = cloudProgrammes.map((p) => withDeltas(p, deltaRows));
+    const programmes = programmesWithDeltas.filter(
       (p) =>
         p.title.toLowerCase().includes(q) ||
         p.code.toLowerCase().includes(q) ||
@@ -385,7 +399,7 @@ export async function searchArchiveWithCustom(query: string): Promise<{
 
     return { programmes, subjects };
   }, fallback);
-}
+});
 
 function slugify(title: string): string {
   return title

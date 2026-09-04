@@ -1,4 +1,10 @@
 import { S3Client, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
+
+const R2_CACHE_SECONDS = 60;
+const HEAD_BATCH_SIZE = 8;
+let r2Client: S3Client | null | undefined;
 
 export const isR2Configured = () => {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -15,7 +21,9 @@ export const getR2Client = () => {
     return null;
   }
 
-  return new S3Client({
+  if (r2Client !== undefined) return r2Client;
+
+  r2Client = new S3Client({
     region: 'auto',
     endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     credentials: {
@@ -23,9 +31,10 @@ export const getR2Client = () => {
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     },
   });
+  return r2Client;
 };
 
-export async function getAllFileCounts(): Promise<Record<string, number>> {
+async function readAllFileCounts(): Promise<Record<string, number>> {
   const client = getR2Client();
   if (!client || !process.env.R2_BUCKET_NAME) return {};
 
@@ -55,6 +64,13 @@ export async function getAllFileCounts(): Promise<Record<string, number>> {
     return {};
   }
 }
+
+export const getAllFileCounts = cache(
+  unstable_cache(readAllFileCounts, ['r2-file-counts'], {
+    revalidate: R2_CACHE_SECONDS,
+    tags: ['r2-files'],
+  }),
+);
 
 export type R2Document = {
   id: string
@@ -117,7 +133,7 @@ export async function searchFiles(query: string): Promise<FileSearchResult[]> {
   }
 }
 
-export async function getSubjectDocuments(
+async function readSubjectDocuments(
   subjectId: string,
 ): Promise<R2Document[] | null> {
   const client = getR2Client();
@@ -138,39 +154,43 @@ export async function getSubjectDocuments(
       (a, b) => (b.LastModified?.getTime() ?? 0) - (a.LastModified?.getTime() ?? 0),
     );
 
-    const docs = await Promise.all(keyedContents.map(async (item) => {
-      const headCmd = new HeadObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: item.Key,
-      });
-      const head = await client.send(headCmd);
-      
-      const title = head.Metadata?.title ? decodeURIComponent(head.Metadata.title) : item.Key?.split('/').pop() || 'Untitled';
-      
-      const date = item.LastModified ? item.LastModified.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '';
-      
-      let sizeStr = '';
-      if (item.Size) {
-        if (item.Size < 1024 * 1024) {
-          sizeStr = Math.round(item.Size / 1024) + ' KB';
-        } else {
-          sizeStr = (item.Size / (1024 * 1024)).toFixed(1) + ' MB';
+    const docs: R2Document[] = [];
+    for (let i = 0; i < keyedContents.length; i += HEAD_BATCH_SIZE) {
+      const batch = keyedContents.slice(i, i + HEAD_BATCH_SIZE);
+      docs.push(...await Promise.all(batch.map(async (item) => {
+        const headCmd = new HeadObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: item.Key,
+        });
+        const head = await client.send(headCmd);
+        
+        const title = head.Metadata?.title ? decodeURIComponent(head.Metadata.title) : item.Key?.split('/').pop() || 'Untitled';
+        
+        const date = item.LastModified ? item.LastModified.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '';
+        
+        let sizeStr = '';
+        if (item.Size) {
+          if (item.Size < 1024 * 1024) {
+            sizeStr = Math.round(item.Size / 1024) + ' KB';
+          } else {
+            sizeStr = (item.Size / (1024 * 1024)).toFixed(1) + ' MB';
+          }
         }
-      }
 
-      const originalName = head.Metadata?.originalname 
-        ? decodeURIComponent(head.Metadata.originalname) 
-        : item.Key?.split('/').pop()?.replace(/^\d+-/, '') || 'document';
+        const originalName = head.Metadata?.originalname 
+          ? decodeURIComponent(head.Metadata.originalname) 
+          : item.Key?.split('/').pop()?.replace(/^\d+-/, '') || 'document';
 
-      return {
-        id: item.Key,
-        key: item.Key,
-        title,
-        date,
-        size: sizeStr,
-        originalName,
-      };
-    }));
+        return {
+          id: item.Key,
+          key: item.Key,
+          title,
+          date,
+          size: sizeStr,
+          originalName,
+        };
+      })));
+    }
 
     return docs;
   } catch (e) {
@@ -182,6 +202,13 @@ export async function getSubjectDocuments(
     return null;
   }
 }
+
+export const getSubjectDocuments = cache(
+  unstable_cache(readSubjectDocuments, ['r2-subject-documents'], {
+    revalidate: R2_CACHE_SECONDS,
+    tags: ['r2-files'],
+  }),
+);
 
 function isR2AccessDenied(e: unknown): boolean {
   if (e instanceof Error && e.name === 'AccessDenied') return true;

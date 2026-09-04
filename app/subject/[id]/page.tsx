@@ -1,10 +1,12 @@
 import { ContributePanel } from '@/components/ContributePanel';
 import { DocumentSection } from '@/components/DocumentSection';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { FileListSkeleton, Skeleton } from '@/components/Skeleton';
 import { getSubjectWithCustom } from '@/lib/subjects';
 import { getSubjectDocuments } from '@/lib/r2';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 export async function generateMetadata({
   params,
@@ -29,20 +31,26 @@ export async function generateMetadata({
   };
 }
 
+async function SubjectFileSummary({ id }: { id: string }) {
+  const documents = (await getSubjectDocuments(id)) || [];
+
+  return <p className="text-3xl font-black tracking-tight text-ink tabular-nums sm:text-4xl">{documents.length}</p>;
+}
+
+async function SubjectFiles({ id }: { id: string }) {
+  const documents = (await getSubjectDocuments(id)) || [];
+  return <DocumentSection title="Files" items={documents} />;
+}
+
 export default async function SubjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const found = await getSubjectWithCustom(id);
-  const r2Docs = await getSubjectDocuments(id);
 
   if (!found) {
     notFound();
   }
 
   const { subject, programme } = found;
-
-  const documents = r2Docs || [];
-
-  const totalFiles = documents.length;
 
   return (
     <main
@@ -69,7 +77,9 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
             {programme.title}
           </p>
           <div className="mt-6 min-w-0 rounded-[1.75rem] bg-sheet p-4 md:rounded-[2rem] md:p-5">
-            <p className="text-3xl font-black tracking-tight text-ink tabular-nums sm:text-4xl">{totalFiles}</p>
+            <Suspense fallback={<Skeleton className="h-10 w-12" />}>
+              <SubjectFileSummary id={id} />
+            </Suspense>
             <p className="mt-1 text-sm text-muted">Shared files</p>
             <div className="mt-5">
               <ContributePanel subjectId={id} />
@@ -77,7 +87,9 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
           </div>
         </section>
 
-        <DocumentSection title="Files" items={documents} />
+        <Suspense fallback={<FileListSkeleton />}>
+          <SubjectFiles id={id} />
+        </Suspense>
       </div>
     </main>
   );

@@ -4,14 +4,25 @@ import { useState } from 'react';
 import { X, Trash2, Loader2, Eye, Download, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { MoreMenu } from '@/components/MoreMenu';
-import { DocxPreview } from '@/components/DocxPreview';
-import { CodeViewer } from '@/components/CodeViewer';
-import { SpreadsheetViewer } from '@/components/SpreadsheetViewer';
-import { ImageViewer } from '@/components/ImageViewer';
+import { PreviewSkeleton } from '@/components/Skeleton';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { getFileKind, type FileKind } from '@/lib/fileKinds';
 import type { R2Document } from '@/lib/r2';
+
+const DocxPreview = dynamic(() => import('@/components/DocxPreview').then((mod) => mod.DocxPreview), {
+  loading: () => <PreviewSkeleton label="Loading document preview" />,
+});
+const CodeViewer = dynamic(() => import('@/components/CodeViewer').then((mod) => mod.CodeViewer), {
+  loading: () => <PreviewSkeleton label="Loading file preview" />,
+});
+const SpreadsheetViewer = dynamic(() => import('@/components/SpreadsheetViewer').then((mod) => mod.SpreadsheetViewer), {
+  loading: () => <PreviewSkeleton label="Loading spreadsheet preview" />,
+});
+const ImageViewer = dynamic(() => import('@/components/ImageViewer').then((mod) => mod.ImageViewer), {
+  loading: () => <PreviewSkeleton label="Loading image preview" />,
+});
 
 function NativePreview({ url }: { url: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -26,10 +37,7 @@ function NativePreview({ url }: { url: string }) {
         onError={() => setStatus('error')}
       />
       {status === 'loading' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-neutral-400 pointer-events-none z-10">
-          <Loader2 size={20} className="animate-spin" />
-          <p className="text-sm">Loading preview&hellip;</p>
-        </div>
+        <div className="pointer-events-none absolute inset-0 z-10 flex"><PreviewSkeleton label="Loading preview" /></div>
       )}
       {status === 'error' && (
         <div className="absolute inset-0 flex items-center justify-center text-center p-8 text-neutral-500">

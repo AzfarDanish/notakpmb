@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PreviewSkeleton } from '@/components/Skeleton';
 
 type State =
   | { status: 'loading' }
@@ -44,11 +45,7 @@ export function SpreadsheetViewer({ url }: { url: string }) {
   }, [url]);
 
   if (state.status === 'loading') {
-    return (
-      <div className="flex items-center justify-center flex-1 min-h-0 text-neutral-400 text-sm p-8">
-        Loading spreadsheet…
-      </div>
-    );
+    return <PreviewSkeleton label="Loading spreadsheet preview" />;
   }
 
   if (state.status === 'error') {

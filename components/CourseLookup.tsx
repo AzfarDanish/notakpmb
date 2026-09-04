@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Search, Loader2, ArrowRight } from 'lucide-react'
+import { Search, ArrowRight } from 'lucide-react'
+import { LookupResultsSkeleton } from '@/components/Skeleton'
 
 type CourseHit = {
   id: string
@@ -11,6 +12,9 @@ type CourseHit = {
   programme: { id: string; code: string; title: string }
   href: string
 }
+
+const SEARCH_CACHE_TTL = 60_000
+const searchCache = new Map<string, { at: number; courses: CourseHit[] }>()
 
 export function CourseLookup({
   placeholder = 'Search course name or code',
@@ -27,6 +31,7 @@ export function CourseLookup({
   const [hits, setHits] = useState<CourseHit[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showSkeleton, setShowSkeleton] = useState(false)
   const [error, setError] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [, startTransition] = useTransition()
@@ -43,6 +48,7 @@ export function CourseLookup({
     const q = query.trim()
     const seq = ++requestSeq.current
     setError(false)
+    setShowSkeleton(false)
 
     if (q.length === 0) {
       startTransition(() => {
@@ -54,9 +60,24 @@ export function CourseLookup({
       return
     }
 
+    const cacheKey = `${programmeId ?? ''}:${q.toLowerCase()}`
+    const cached = searchCache.get(cacheKey)
+    if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL) {
+      startTransition(() => {
+        setHits(cached.courses)
+        setOpen(true)
+        setLoading(false)
+        setActiveIndex(-1)
+      })
+      return
+    }
+
     setOpen(true)
     setLoading(true)
     const controller = new AbortController()
+    const skeletonTimer = setTimeout(() => {
+      if (seq === requestSeq.current) setShowSkeleton(true)
+    }, 150)
     const delay = q.length === 1 ? 120 : 180
     const t = setTimeout(async () => {
       try {
@@ -68,6 +89,7 @@ export function CourseLookup({
         if (!res.ok) throw new Error('fetch failed')
         const data = (await res.json()) as { courses: CourseHit[] }
         if (seq !== requestSeq.current) return
+        searchCache.set(cacheKey, { at: Date.now(), courses: data.courses ?? [] })
         startTransition(() => {
           setHits(data.courses ?? [])
           setOpen(true)
@@ -83,12 +105,17 @@ export function CourseLookup({
           setError(true)
         })
       } finally {
-        if (seq === requestSeq.current) setLoading(false)
+        clearTimeout(skeletonTimer)
+        if (seq === requestSeq.current) {
+          setLoading(false)
+          setShowSkeleton(false)
+        }
       }
     }, delay)
     return () => {
       controller.abort()
       clearTimeout(t)
+      clearTimeout(skeletonTimer)
     }
   }, [query, programmeId, startTransition])
 
@@ -180,7 +207,7 @@ export function CourseLookup({
           }`}
         />
         <div className="absolute right-3 flex items-center gap-2">
-          {loading && <Loader2 size={16} className="animate-spin text-muted" aria-hidden="true" />}
+          {loading && <span className="h-2 w-2 rounded-full bg-muted/50 motion-safe:animate-pulse" aria-hidden="true" />}
           {!loading && query.trim().length > 0 && (
             <span className="hidden rounded-md border border-line bg-soft px-1.5 py-0.5 text-[10px] font-semibold text-muted sm:block">
               {hits.length}
@@ -204,12 +231,7 @@ export function CourseLookup({
           className={`absolute left-0 right-0 z-40 max-w-full overflow-auto rounded-3xl border border-line bg-white shadow-[0_24px_80px_rgba(23,20,17,0.14)] ${placeAbove ? 'bottom-[calc(100%+0.5rem)]' : 'top-[calc(100%+0.5rem)]'}`}
           style={menuMaxHeight ? { maxHeight: `${menuMaxHeight}px` } : undefined}
         >
-          {loading && hits.length === 0 && (
-            <div className="flex items-center justify-center gap-2 px-5 py-8 text-sm font-semibold text-muted">
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-              Searching courses
-            </div>
-          )}
+          {loading && hits.length === 0 && showSkeleton && <LookupResultsSkeleton />}
           {error && !loading && (
             <div className="px-5 py-8 text-center">
               <p className="text-sm font-semibold text-ink">Could not search courses</p>

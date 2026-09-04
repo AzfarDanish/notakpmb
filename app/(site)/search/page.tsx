@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { searchArchiveWithCustom } from '@/lib/subjects';
 import { CourseLookup } from '@/components/CourseLookup';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { EmptyState } from '@/components/EmptyState';
+import { SearchResultsSkeleton } from '@/components/Skeleton';
 
 export const metadata: Metadata = {
   title: 'Search the Archive',
@@ -14,6 +16,71 @@ export const metadata: Metadata = {
   },
 };
 
+async function SearchResults({ query }: { query: string }) {
+  const results = await searchArchiveWithCustom(query);
+
+  if (results.programmes.length === 0 && results.subjects.length === 0) {
+    return (
+      <EmptyState
+        title={`No results for "${query}"`}
+        hint="Try a shorter course name or a code such as CSC 1413."
+      />
+    );
+  }
+
+  return (
+    <>
+      {results.programmes.length > 0 && (
+        <section className="mb-12">
+          <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Programmes</h2>
+          <div className="divide-y divide-line/70">
+            {results.programmes.map((programme) => (
+              <Link
+                key={programme.id}
+                href={`/programme/${programme.id}`}
+                className="group flex min-w-0 items-center justify-between gap-4 rounded-2xl px-2 py-4 transition-colors hover:bg-soft md:px-4"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="text-dynamic block text-xs font-bold text-accent">{programme.code}</span>
+                  <span className="text-dynamic mt-1 block text-xl font-black tracking-tight text-ink">
+                    {programme.title}
+                  </span>
+                </span>
+                <ArrowRight size={18} className="shrink-0 text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {results.subjects.length > 0 && (
+        <section className="mb-12">
+          <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Subjects</h2>
+          <div className="divide-y divide-line/70">
+            {results.subjects.map(({ subject, programme }) => (
+              <Link
+                key={subject.id}
+                href={`/subject/${subject.id}`}
+                className="group flex min-w-0 items-center justify-between gap-4 rounded-2xl px-2 py-4 transition-colors hover:bg-soft md:px-4"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="text-dynamic block text-xl font-black tracking-tight text-ink">
+                    {subject.title}
+                  </span>
+                  <span className="text-dynamic mt-1 block text-sm text-muted">
+                    {subject.code} · {programme.code}
+                  </span>
+                </span>
+                <ArrowRight size={18} className="shrink-0 text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -21,8 +88,6 @@ export default async function SearchPage({
 }) {
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
-  const results = query ? await searchArchiveWithCustom(query) : null;
-
   return (
     <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
       <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Search' }]} />
@@ -50,61 +115,10 @@ export default async function SearchPage({
             </div>
           )}
 
-          {query && results &&
-            results.programmes.length === 0 &&
-            results.subjects.length === 0 && (
-            <EmptyState
-              title={`No results for "${query}"`}
-              hint="Try a shorter course name or a code such as CSC 1413."
-            />
-          )}
-
-          {query && results && results.programmes.length > 0 && (
-            <section className="mb-12">
-              <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Programmes</h2>
-              <div className="divide-y divide-line/70">
-                {results.programmes.map((programme) => (
-                  <Link
-                    key={programme.id}
-                    href={`/programme/${programme.id}`}
-                    className="group flex min-w-0 items-center justify-between gap-4 rounded-2xl px-2 py-4 transition-colors hover:bg-soft md:px-4"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="text-dynamic block text-xs font-bold text-accent">{programme.code}</span>
-                      <span className="text-dynamic mt-1 block text-xl font-black tracking-tight text-ink">
-                        {programme.title}
-                      </span>
-                    </span>
-                    <ArrowRight size={18} className="shrink-0 text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink" />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {query && results && results.subjects.length > 0 && (
-            <section className="mb-12">
-              <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Subjects</h2>
-              <div className="divide-y divide-line/70">
-                {results.subjects.map(({ subject, programme }) => (
-                  <Link
-                    key={subject.id}
-                    href={`/subject/${subject.id}`}
-                    className="group flex min-w-0 items-center justify-between gap-4 rounded-2xl px-2 py-4 transition-colors hover:bg-soft md:px-4"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="text-dynamic block text-xl font-black tracking-tight text-ink">
-                        {subject.title}
-                      </span>
-                      <span className="text-dynamic mt-1 block text-sm text-muted">
-                        {subject.code} · {programme.code}
-                      </span>
-                    </span>
-                    <ArrowRight size={18} className="shrink-0 text-muted/50 transition-transform group-hover:translate-x-1 group-hover:text-ink" />
-                  </Link>
-                ))}
-              </div>
-            </section>
+          {query && (
+            <Suspense key={query} fallback={<SearchResultsSkeleton />}>
+              <SearchResults query={query} />
+            </Suspense>
           )}
         </section>
       </div>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { isR2Configured } from '@/lib/r2';
 import { isD1Configured } from '@/lib/d1';
 import { addSubject, deleteSubject, renameSubject } from '@/lib/subjects';
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const subject = await addSubject({ programmeId, title, code });
+    revalidateTag('subjects', 'max');
     return NextResponse.json({ subject });
   } catch (e) {
     if (
@@ -74,6 +76,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const subject = await renameSubject({ id, title, code });
+    revalidateTag('subjects', 'max');
     return NextResponse.json({ subject });
   } catch (e) {
     if (e instanceof Error && e.message === 'Subject title is required') {
@@ -105,6 +108,8 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const result = await deleteSubject(id);
+    revalidateTag('subjects', 'max');
+    revalidateTag('r2-files', 'max');
     return NextResponse.json({ success: true, ...result });
   } catch (e) {
     if (e instanceof Error && e.message === 'Subject not found') {

@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next';
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import Script from 'next/script';
+import { Suspense } from 'react';
 import { Footer } from '@/components/Footer';
 import { FooterWordmark } from '@/components/FooterWordmark';
 import './globals.css';
@@ -69,6 +70,27 @@ export const viewport: Viewport = {
   themeColor: '#ffffff',
 };
 
+function FooterFallback() {
+  return (
+    <footer className="-mt-[0.12em] w-full min-w-0 bg-[#111111] text-white" aria-busy="true">
+      <div className="page-shell py-10 md:py-14">
+        <div className="grid min-w-0 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-10">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="min-w-0 space-y-4">
+              <div className="h-6 w-28 rounded-full bg-white/15 motion-safe:animate-pulse" />
+              <div className="space-y-3">
+                <div className="h-4 w-36 rounded-full bg-white/10 motion-safe:animate-pulse" />
+                <div className="h-4 w-28 rounded-full bg-white/10 motion-safe:animate-pulse" />
+                <div className="h-4 w-32 rounded-full bg-white/10 motion-safe:animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${sfProDisplay.variable}`}>
@@ -115,7 +137,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <div id="scroll-root" className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-w-0 flex-1 flex-col">{children}</div>
           <FooterWordmark />
-          <Footer />
+          <Suspense fallback={<FooterFallback />}>
+            <Footer />
+          </Suspense>
         </div>
         <Analytics />
       </body>

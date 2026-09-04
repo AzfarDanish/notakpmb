@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client } from '@/lib/r2';
 
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
         originalName: encodeURIComponent(file.name),
       }
     }));
+
+    revalidateTag('r2-files', 'max');
 
     return NextResponse.json({ success: true, key });
   } catch (error) {

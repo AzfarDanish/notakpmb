@@ -7,8 +7,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
-import { CoursePickerModal } from '@/components/CoursePickerModal';
+import dynamic from 'next/dynamic';
 import { useScrollLock } from '@/hooks/useScrollLock';
+
+const CoursePickerModal = dynamic(
+  () => import('@/components/CoursePickerModal').then((mod) => mod.CoursePickerModal),
+  { ssr: false },
+);
 import type { Subject } from '@/lib/data';
 
 export function SubjectList({

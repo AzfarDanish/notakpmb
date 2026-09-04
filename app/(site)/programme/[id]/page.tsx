@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { Search } from 'lucide-react';
 import { getAllFileCounts, isR2Configured } from '@/lib/r2';
 import { getProgramme, getSubjectsForProgramme } from '@/lib/subjects';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { CourseLookup } from '@/components/CourseLookup';
 import { SubjectList } from '@/components/SubjectList';
+import { StatsSkeleton, SubjectListSkeleton } from '@/components/Skeleton';
 
 export async function generateMetadata({
   params,
@@ -29,6 +31,40 @@ export async function generateMetadata({
   };
 }
 
+async function ProgrammeStats({ id }: { id: string }) {
+  const [fileCounts, subjects] = await Promise.all([
+    getAllFileCounts(),
+    getSubjectsForProgramme(id),
+  ]);
+  const totalFiles = subjects.reduce((acc, s) => acc + (fileCounts[s.id] || 0), 0);
+  const totalSubjects = subjects.length;
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <p className="text-3xl font-black tracking-tight text-ink tabular-nums sm:text-4xl">{totalSubjects}</p>
+        <p className="mt-1 text-sm text-muted">Subjects</p>
+      </div>
+      <div>
+        <p className="text-3xl font-black tracking-tight text-ink tabular-nums sm:text-4xl">{totalFiles}</p>
+        <p className="mt-1 text-sm text-muted">Files</p>
+      </div>
+    </div>
+  );
+}
+
+async function ProgrammeSubjects({ id, programmeTitle }: { id: string; programmeTitle: string }) {
+  const subjects = await getSubjectsForProgramme(id);
+  return (
+    <SubjectList
+      subjects={subjects}
+      programmeId={id}
+      programmeTitle={programmeTitle}
+      canManage={isR2Configured()}
+    />
+  );
+}
+
 export default async function ProgrammePage({
   params,
 }: {
@@ -40,13 +76,6 @@ export default async function ProgrammePage({
   if (!programme) {
     notFound();
   }
-
-  const [fileCounts, subjects] = await Promise.all([
-    getAllFileCounts(),
-    getSubjectsForProgramme(id),
-  ]);
-  const totalFiles = subjects.reduce((acc, s) => acc + (fileCounts[s.id] || 0), 0);
-  const totalSubjects = subjects.length;
 
   return (
     <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
@@ -69,16 +98,9 @@ export default async function ProgrammePage({
         </div>
 
         <div className="min-w-0 rounded-[1.75rem] bg-sheet p-4 md:rounded-[2rem] md:p-6 xl:self-end">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-3xl font-black tracking-tight text-ink tabular-nums sm:text-4xl">{totalSubjects}</p>
-              <p className="mt-1 text-sm text-muted">Subjects</p>
-            </div>
-            <div>
-              <p className="text-3xl font-black tracking-tight text-ink tabular-nums sm:text-4xl">{totalFiles}</p>
-              <p className="mt-1 text-sm text-muted">Files</p>
-            </div>
-          </div>
+          <Suspense fallback={<StatsSkeleton />}>
+            <ProgrammeStats id={id} />
+          </Suspense>
           <div className="mt-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-stretch">
             <CourseLookup size="sm" placeholder="Search course name or code" />
             <Link href="/search" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-paper sm:shrink-0">
@@ -90,12 +112,9 @@ export default async function ProgrammePage({
       </section>
 
       <section className="mt-12 md:mt-16">
-        <SubjectList
-          subjects={subjects}
-          programmeId={id}
-          programmeTitle={programme.title}
-          canManage={isR2Configured()}
-        />
+        <Suspense fallback={<SubjectListSkeleton />}>
+          <ProgrammeSubjects id={id} programmeTitle={programme.title} />
+        </Suspense>
       </section>
     </main>
   );

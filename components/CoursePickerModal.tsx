@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, Loader2, Search, X } from 'lucide-react'
 import { useScrollLock } from '@/hooks/useScrollLock'
+import { LookupResultsSkeleton } from '@/components/Skeleton'
 
 type CourseHit = {
   id: string
@@ -11,6 +12,9 @@ type CourseHit = {
   programme: { id: string; code: string; title: string }
   href: string
 }
+
+const SEARCH_CACHE_TTL = 60_000
+const searchCache = new Map<string, { at: number; courses: CourseHit[] }>()
 
 function ModalCard({
   children,
@@ -55,6 +59,7 @@ export function CoursePickerModal({
   const [hits, setHits] = useState<CourseHit[]>([])
   const [selected, setSelected] = useState<CourseHit | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showSkeleton, setShowSkeleton] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -64,28 +69,54 @@ export function CoursePickerModal({
     const q = query.trim()
     if (q.length < 1) {
       setHits([])
+      setLoading(false)
+      setShowSkeleton(false)
       return
     }
+
+    const cacheKey = `${programmeId}:${q.toLowerCase()}`
+    const cached = searchCache.get(cacheKey)
+    if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL) {
+      setHits(cached.courses.filter(
+        (c) => !existingSubjects.some((s) => s.id === c.id || s.code.trim().toUpperCase() === c.code.trim().toUpperCase()),
+      ))
+      setLoading(false)
+      setShowSkeleton(false)
+      return
+    }
+
     setLoading(true)
+    setShowSkeleton(false)
+    const controller = new AbortController()
+    const skeletonTimer = setTimeout(() => setShowSkeleton(true), 150)
     const t = setTimeout(async () => {
       try {
         const res = await fetch(
           `/api/courses?q=${encodeURIComponent(q)}&programmeId=${encodeURIComponent(programmeId)}&limit=12`,
+          { signal: controller.signal },
         )
         if (!res.ok) throw new Error('fetch failed')
         const data = (await res.json()) as { courses: CourseHit[] }
+        searchCache.set(cacheKey, { at: Date.now(), courses: data.courses ?? [] })
         // filter out already existing subjects (strict: don't show already added)
         const filtered = (data.courses ?? []).filter(
           (c) => !existingSubjects.some((s) => s.id === c.id || s.code.trim().toUpperCase() === c.code.trim().toUpperCase()),
         )
         setHits(filtered)
       } catch {
+        if (controller.signal.aborted) return
         setHits([])
       } finally {
+        clearTimeout(skeletonTimer)
         setLoading(false)
+        setShowSkeleton(false)
       }
-    }, 250)
-    return () => clearTimeout(t)
+    }, 180)
+    return () => {
+      controller.abort()
+      clearTimeout(t)
+      clearTimeout(skeletonTimer)
+    }
   }, [query, programmeId, existingSubjects])
 
   const displayHits = hits
@@ -169,7 +200,7 @@ export function CoursePickerModal({
               autoComplete="off"
               className="w-full rounded-2xl border border-line bg-white py-3 pl-11 pr-10 text-base transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none md:text-sm"
             />
-            {loading && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-muted" />}
+            {loading && <span className="absolute right-4 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-muted/50 motion-safe:animate-pulse" />}
           </div>
 
           {/* Selected preview */}
@@ -189,7 +220,9 @@ export function CoursePickerModal({
 
           {/* Hits list */}
           <div className="max-h-[18rem] overflow-auto rounded-2xl border border-line">
-            {displayHits.length === 0 && !loading ? (
+            {loading && displayHits.length === 0 && showSkeleton ? (
+              <LookupResultsSkeleton />
+            ) : displayHits.length === 0 && !loading ? (
               <div className="px-4 py-8 text-center">
                 {query.trim().length >= 1 ? (
                   <>

@@ -1,18 +1,65 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { ArrowRight, BookOpen, Search } from 'lucide-react';
 import { getAllFileCounts } from '@/lib/r2';
 import { getProgrammes } from '@/lib/subjects';
 import { getAllCourses } from '@/lib/courses';
 import { CourseLookup } from '@/components/CourseLookup';
+import { ProgrammeListSkeleton } from '@/components/Skeleton';
 
-export default async function Home() {
-  const [programmes, fileCounts, catalog] = await Promise.all([
+async function ProgrammesPanel() {
+  const [programmes, fileCounts] = await Promise.all([
     getProgrammes(),
     getAllFileCounts(),
-    getAllCourses(),
   ]);
+
+  return (
+    <section className="flex min-w-0 flex-col gap-2 xl:pt-8">
+      {programmes.map((programme) => {
+        const totalFiles = programme.subjects.reduce(
+          (acc, subject) => acc + (fileCounts[subject.id] || 0),
+          0,
+        );
+        const totalSubjects = programme.subjects.length;
+
+        return (
+          <Link
+            key={programme.id}
+            href={`/programme/${programme.id}`}
+            className="group grid min-w-0 gap-4 rounded-[1.5rem] px-3 py-4 transition-colors hover:bg-soft sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start sm:px-4 md:gap-5 md:rounded-[2rem] md:px-5 md:py-6 xl:grid-cols-[8rem_minmax(0,1fr)_auto] xl:items-center xl:py-7"
+          >
+            <p className="text-dynamic text-sm font-bold leading-tight text-accent">
+              {programme.code}
+            </p>
+            <div className="min-w-0">
+              <h2 className="text-dynamic text-xl font-black tracking-tight text-ink text-balance sm:text-2xl md:text-3xl xl:text-4xl">
+                {programme.title}
+              </h2>
+              <p className="text-dynamic mt-2 max-w-xl text-sm leading-6 text-muted">
+                {programme.description}
+              </p>
+            </div>
+            <div className="flex min-w-0 items-center justify-between gap-4 sm:col-span-2 xl:col-span-1 xl:justify-end">
+              <span className="text-dynamic text-sm font-semibold text-muted">
+                {totalSubjects} subjects · {totalFiles} files
+              </span>
+              <ArrowRight className="shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-ink" size={20} strokeWidth={1.7} />
+            </div>
+          </Link>
+        );
+      })}
+    </section>
+  );
+}
+
+async function CatalogCount() {
+  const catalog = await getAllCourses();
   const catalogCount = catalog.length;
 
+  return <>{catalogCount} courses</>;
+}
+
+export default function Home() {
   return (
     <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
       <div className="grid min-w-0 gap-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-16">
@@ -35,7 +82,9 @@ export default async function Home() {
             <div className="mt-3 flex flex-wrap gap-2 px-1">
               <Link href="/courses" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
                 <BookOpen size={16} strokeWidth={1.7} />
-                {catalogCount} courses
+                <Suspense fallback="Courses">
+                  <CatalogCount />
+                </Suspense>
               </Link>
               <Link href="/search" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
                 <Search size={16} strokeWidth={1.7} />
@@ -45,41 +94,9 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="flex min-w-0 flex-col gap-2 xl:pt-8">
-          {programmes.map((programme) => {
-            const totalFiles = programme.subjects.reduce(
-              (acc, subject) => acc + (fileCounts[subject.id] || 0),
-              0,
-            );
-            const totalSubjects = programme.subjects.length;
-
-            return (
-              <Link
-                key={programme.id}
-                href={`/programme/${programme.id}`}
-                className="group grid min-w-0 gap-4 rounded-[1.5rem] px-3 py-4 transition-colors hover:bg-soft sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start sm:px-4 md:gap-5 md:rounded-[2rem] md:px-5 md:py-6 xl:grid-cols-[8rem_minmax(0,1fr)_auto] xl:items-center xl:py-7"
-              >
-                <p className="text-dynamic text-sm font-bold leading-tight text-accent">
-                  {programme.code}
-                </p>
-                <div className="min-w-0">
-                  <h2 className="text-dynamic text-xl font-black tracking-tight text-ink text-balance sm:text-2xl md:text-3xl xl:text-4xl">
-                    {programme.title}
-                  </h2>
-                  <p className="text-dynamic mt-2 max-w-xl text-sm leading-6 text-muted">
-                    {programme.description}
-                  </p>
-                </div>
-                <div className="flex min-w-0 items-center justify-between gap-4 sm:col-span-2 xl:col-span-1 xl:justify-end">
-                  <span className="text-dynamic text-sm font-semibold text-muted">
-                    {totalSubjects} subjects · {totalFiles} files
-                  </span>
-                  <ArrowRight className="shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-ink" size={20} strokeWidth={1.7} />
-                </div>
-              </Link>
-            );
-          })}
-        </section>
+        <Suspense fallback={<section className="min-w-0 xl:pt-8"><ProgrammeListSkeleton /></section>}>
+          <ProgrammesPanel />
+        </Suspense>
       </div>
     </main>
   );
