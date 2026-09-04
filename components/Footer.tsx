@@ -26,17 +26,17 @@ export async function Footer() {
   const programmes = await getProgrammes()
 
   return (
-    <footer className="-mt-[0.12em] bg-[#111111] text-white">
+    <footer className="-mt-[0.12em] w-full min-w-0 bg-[#111111] text-white">
       <div className="page-shell py-10 md:py-14">
-        <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_1.2fr_0.8fr]">
-          <div>
+        <div className="grid min-w-0 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-10">
+          <div className="min-w-0">
             <h3 className="text-2xl font-black tracking-tight">NotaKPMB</h3>
-            <p className="mt-3 max-w-[260px] text-sm leading-6 text-white/65">
+            <p className="text-dynamic mt-3 max-w-[260px] text-sm leading-6 text-white/65">
               Student notes, course codes, and shared files in one open archive.
             </p>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="mb-4 text-sm font-bold text-white">Open</p>
             <ul className="flex flex-col gap-3 text-sm">
               <li>
@@ -57,12 +57,12 @@ export async function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="mb-4 text-sm font-bold text-white">Programmes</p>
             <ul className="flex flex-col gap-3 text-sm">
               {programmes.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/programme/${p.id}`} className="text-white/65 transition-colors hover:text-white">
+                  <Link href={`/programme/${p.id}`} className="text-dynamic text-white/65 transition-colors hover:text-white">
                     {p.title}
                   </Link>
                 </li>
@@ -70,7 +70,7 @@ export async function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="mb-4 text-sm font-bold text-white">Project</p>
             <ul className="flex flex-col gap-3 text-sm">
               <li>
@@ -84,7 +84,7 @@ export async function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:azfardns@gmail.com" className="text-white/65 transition-colors hover:text-white">
+                <a href="mailto:azfardns@gmail.com" className="text-dynamic text-white/65 transition-colors hover:text-white">
                   azfardns@gmail.com
                 </a>
               </li>
@@ -92,7 +92,7 @@ export async function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-6 border-t border-white/10 pt-6 md:flex-row md:items-center">
+        <div className="mt-10 flex min-w-0 flex-col items-start justify-between gap-6 border-t border-white/10 pt-6 md:flex-row md:items-center">
           <span className="text-xs font-medium text-white/50">
             Created by Azfar Danish
           </span>
@@ -103,7 +103,7 @@ export async function Footer() {
               rel="noopener noreferrer"
               aria-label="Instagram"
               title="Instagram"
-              className="transition-colors hover:text-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-white"
             >
               <InstagramIcon />
             </a>
@@ -113,7 +113,7 @@ export async function Footer() {
               rel="noopener noreferrer"
               aria-label="Portfolio"
               title="Portfolio"
-              className="transition-colors hover:text-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-white"
             >
               <Globe size={20} strokeWidth={1.5} />
             </a>

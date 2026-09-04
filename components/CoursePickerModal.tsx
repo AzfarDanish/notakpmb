@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Check, Loader2, Search, X } from 'lucide-react'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 type CourseHit = {
   id: string
@@ -20,14 +21,18 @@ function ModalCard({
   onClose: () => void
   disableClose?: boolean
 }) {
+  useScrollLock(true)
+
   return (
     <div
       onClick={() => !disableClose && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 overflow-y-auto bg-ink/10 p-3 backdrop-blur-sm sm:p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] w-full max-w-md overflow-auto rounded-[2rem] border border-line bg-white p-6 shadow-[0_24px_90px_rgba(23,20,17,0.16)] md:p-8"
+        role="dialog"
+        aria-modal="true"
+        className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-auto rounded-[2rem] border border-line bg-white p-5 shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-h-[calc(100dvh-2rem)] sm:p-6 md:p-8"
       >
         {children}
       </div>
@@ -118,15 +123,15 @@ export function CoursePickerModal({
 
   return (
     <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h3 className="text-2xl font-black tracking-tight text-ink">Add subject</h3>
-          <p className="mt-1 text-sm text-muted">Pick from the Computer Science cloud catalog.</p>
+      <div className="mb-6 flex min-w-0 items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="text-dynamic text-2xl font-black tracking-tight text-ink">Add subject</h3>
+          <p className="text-dynamic mt-1 text-sm text-muted">Pick from the Computer Science cloud catalog.</p>
         </div>
         <button
           onClick={onClose}
           disabled={isSubmitting || success}
-          className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink disabled:opacity-50"
+          className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink disabled:opacity-50"
           aria-label="Close"
         >
           <X size={20} strokeWidth={1.5} />
@@ -162,7 +167,7 @@ export function CoursePickerModal({
               placeholder="Search code or name"
               autoFocus
               autoComplete="off"
-              className="w-full rounded-2xl border border-line bg-white py-3 pl-11 pr-10 text-sm transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none"
+              className="w-full rounded-2xl border border-line bg-white py-3 pl-11 pr-10 text-base transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none md:text-sm"
             />
             {loading && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-muted" />}
           </div>
@@ -170,8 +175,8 @@ export function CoursePickerModal({
           {/* Selected preview */}
           {selected && (
             <div className="mb-4 flex items-center gap-3 rounded-2xl bg-sheet px-4 py-3">
-              <span className="shrink-0 text-xs font-bold text-accent">{selected.code}</span>
-              <span className="text-sm font-semibold leading-tight text-ink">{selected.title}</span>
+              <span className="text-dynamic shrink-0 text-xs font-bold text-accent">{selected.code}</span>
+              <span className="text-dynamic min-w-0 flex-1 text-sm font-semibold leading-tight text-ink">{selected.title}</span>
               <button
                 onClick={() => setSelected(null)}
                 className="ml-auto text-muted transition-colors hover:text-ink"
@@ -211,11 +216,11 @@ export function CoursePickerModal({
                       <button
                         type="button"
                         onClick={() => setSelected(hit)}
-                        className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-soft ${isSelected ? 'bg-ink text-paper hover:bg-ink' : ''}`}
+                        className={`flex w-full min-w-0 items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-soft ${isSelected ? 'bg-ink text-paper hover:bg-ink' : ''}`}
                       >
                         <span className="min-w-0 flex-1">
                           <span className={`block text-xs font-bold ${isSelected ? 'text-paper' : 'text-accent'}`}>{hit.code}</span>
-                          <span className={`mt-0.5 block text-sm font-semibold leading-tight ${isSelected ? 'text-paper' : 'text-ink'}`}>{hit.title}</span>
+                          <span className={`text-dynamic mt-0.5 block text-sm font-semibold leading-tight ${isSelected ? 'text-paper' : 'text-ink'}`}>{hit.title}</span>
                         </span>
                         {isSelected && <Check size={16} className="shrink-0 mt-1 text-white" />}
                       </button>
@@ -226,7 +231,7 @@ export function CoursePickerModal({
             )}
           </div>
 
-          <p className="mt-3 text-xs font-medium text-muted">
+          <p className="text-dynamic mt-3 text-xs font-medium text-muted">
             {query.trim() ? `${displayHits.length} result${displayHits.length === 1 ? '' : 's'} from cloud` : 'Type to search. Strict pick-only.'}
             {' · '}tag <span className="text-ink">azferish</span> if missing
           </p>
@@ -234,7 +239,7 @@ export function CoursePickerModal({
           {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
           {success && <p className="mt-3 text-sm text-green-600">Subject added. Refreshing...</p>}
 
-          <div className="flex items-center justify-end gap-4 mt-6">
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <button
               type="button"
               onClick={onClose}
@@ -247,7 +252,7 @@ export function CoursePickerModal({
               type="button"
               onClick={handleAdd}
               disabled={!selected || isSubmitting || success}
-              className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
             >
               {isSubmitting ? (
                 <>

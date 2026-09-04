@@ -72,7 +72,7 @@ export const viewport: Viewport = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${sfProDisplay.variable}`}>
-      <body className="bg-paper text-ink font-sans antialiased flex min-h-screen flex-col" suppressHydrationWarning>
+      <body className="flex min-h-screen min-w-0 flex-col bg-paper font-sans text-ink antialiased" suppressHydrationWarning>
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-2xl focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-paper"
@@ -112,8 +112,8 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
             }),
           }}
         />
-        <div id="scroll-root" className="flex flex-1 flex-col">
-          <div className="flex-1 flex flex-col">{children}</div>
+        <div id="scroll-root" className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
           <FooterWordmark />
           <Footer />
         </div>

@@ -14,30 +14,30 @@ export default async function Home() {
   const catalogCount = catalog.length;
 
   return (
-    <main id="main" className="page-shell py-8 md:py-14">
-      <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
-        <section className="lg:sticky lg:top-10 lg:h-fit">
+    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+      <div className="grid min-w-0 gap-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-16">
+        <section className="min-w-0 xl:sticky xl:top-10 xl:h-fit">
           <Link href="/" className="inline-flex text-2xl font-black tracking-tight text-ink">
             NotaKPMB
           </Link>
 
-          <div className="mt-10 md:mt-16">
-            <h1 className="max-w-2xl text-5xl font-black leading-[0.9] tracking-[-0.07em] text-balance md:text-7xl lg:text-8xl">
+          <div className="mt-8 md:mt-12 xl:mt-16">
+            <h1 className="text-dynamic max-w-2xl text-4xl font-black leading-[0.94] tracking-[-0.06em] text-balance xs:text-[2.8rem] sm:text-5xl md:text-6xl xl:text-7xl 2xl:text-8xl">
               Find the note before class starts.
             </h1>
-            <p className="mt-6 max-w-md text-base leading-7 text-muted">
+            <p className="text-dynamic mt-6 max-w-md text-base leading-7 text-muted">
               Search course codes, browse programmes, and open shared files from the live KPMB archive.
             </p>
           </div>
 
-          <div className="mt-9 max-w-xl rounded-[2rem] bg-sheet p-3 md:p-4">
+          <div className="mt-8 max-w-xl rounded-[1.75rem] bg-sheet p-3 md:mt-9 md:rounded-[2rem] md:p-4">
             <CourseLookup size="lg" placeholder="Type a subject or code" />
             <div className="mt-3 flex flex-wrap gap-2 px-1">
-              <Link href="/courses" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
+              <Link href="/courses" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
                 <BookOpen size={16} strokeWidth={1.7} />
                 {catalogCount} courses
               </Link>
-              <Link href="/search" className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
+              <Link href="/search" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
                 <Search size={16} strokeWidth={1.7} />
                 Search files
               </Link>
@@ -45,7 +45,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-3 lg:pt-8">
+        <section className="flex min-w-0 flex-col gap-2 xl:pt-8">
           {programmes.map((programme) => {
             const totalFiles = programme.subjects.reduce(
               (acc, subject) => acc + (fileCounts[subject.id] || 0),
@@ -57,24 +57,24 @@ export default async function Home() {
               <Link
                 key={programme.id}
                 href={`/programme/${programme.id}`}
-                className="group grid gap-5 rounded-[2rem] px-1 py-5 transition-colors hover:bg-soft sm:grid-cols-[8rem_1fr_auto] sm:items-center sm:px-5 md:py-7"
+                className="group grid min-w-0 gap-4 rounded-[1.5rem] px-3 py-4 transition-colors hover:bg-soft sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start sm:px-4 md:gap-5 md:rounded-[2rem] md:px-5 md:py-6 xl:grid-cols-[8rem_minmax(0,1fr)_auto] xl:items-center xl:py-7"
               >
-                <p className="text-sm font-bold leading-tight text-accent">
+                <p className="text-dynamic text-sm font-bold leading-tight text-accent">
                   {programme.code}
                 </p>
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight text-ink text-balance md:text-4xl">
+                <div className="min-w-0">
+                  <h2 className="text-dynamic text-xl font-black tracking-tight text-ink text-balance sm:text-2xl md:text-3xl xl:text-4xl">
                     {programme.title}
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
+                  <p className="text-dynamic mt-2 max-w-xl text-sm leading-6 text-muted">
                     {programme.description}
                   </p>
                 </div>
-                <div className="flex items-center justify-between gap-4 sm:justify-end">
-                  <span className="text-sm font-semibold text-muted">
+                <div className="flex min-w-0 items-center justify-between gap-4 sm:col-span-2 xl:col-span-1 xl:justify-end">
+                  <span className="text-dynamic text-sm font-semibold text-muted">
                     {totalSubjects} subjects · {totalFiles} files
                   </span>
-                  <ArrowRight className="text-muted transition-transform group-hover:translate-x-1 group-hover:text-ink" size={20} strokeWidth={1.7} />
+                  <ArrowRight className="shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-ink" size={20} strokeWidth={1.7} />
                 </div>
               </Link>
             );

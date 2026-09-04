@@ -8,6 +8,7 @@ import { ArrowRight, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-reac
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
 import { CoursePickerModal } from '@/components/CoursePickerModal';
+import { useScrollLock } from '@/hooks/useScrollLock';
 import type { Subject } from '@/lib/data';
 
 export function SubjectList({
@@ -42,10 +43,10 @@ export function SubjectList({
       {subjects.length > 0 && (
         <div className="divide-y divide-line/70">
           {subjects.map((subject) => (
-            <div key={subject.id} className="group flex items-center gap-4 py-4 transition-colors hover:px-4 hover:bg-soft md:py-5">
-              <Link href={`/subject/${subject.id}`} className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[8rem_1fr] sm:items-baseline">
-                <p className="text-sm font-bold text-accent">{subject.code}</p>
-                <h3 className="text-xl font-black tracking-tight text-ink text-balance md:text-2xl">
+            <div key={subject.id} className="group flex min-w-0 items-center gap-3 rounded-2xl px-2 py-4 transition-colors hover:bg-soft sm:gap-4 md:px-4 md:py-5">
+              <Link href={`/subject/${subject.id}`} className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-baseline">
+                <p className="text-dynamic text-sm font-bold text-accent">{subject.code}</p>
+                <h3 className="text-dynamic text-xl font-black tracking-tight text-ink text-balance md:text-2xl">
                   {subject.title}
                 </h3>
               </Link>
@@ -151,6 +152,8 @@ function ModalCard({
   onClose: () => void
   disableClose?: boolean
 }) {
+  useScrollLock(true);
+
   return (
     <>
       <motion.div
@@ -158,16 +161,19 @@ function ModalCard({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={() => !disableClose && onClose()}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-50 overflow-y-auto bg-ink/10 p-3 backdrop-blur-sm sm:p-4"
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md rounded-[2rem] border border-line bg-white p-6 shadow-[0_24px_90px_rgba(23,20,17,0.16)] md:p-8"
+          role="dialog"
+          aria-modal="true"
+          className="my-auto w-full max-w-md rounded-[2rem] border border-line bg-white p-5 shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:p-6 md:p-8"
+          style={{ maxHeight: 'calc(100dvh - 2rem)' }}
         >
-          {children}
+      <div className="min-w-0 max-h-[calc(100dvh-5rem)] overflow-y-auto">{children}</div>
         </motion.div>
       </motion.div>
     </>
@@ -221,9 +227,9 @@ function AddSubjectModal({
 
   return (
     <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h3 className="text-2xl font-black tracking-tight text-ink">
+      <div className="mb-6 flex min-w-0 items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="text-dynamic text-2xl font-black tracking-tight text-ink">
             Add subject
           </h3>
         </div>
@@ -253,7 +259,7 @@ function AddSubjectModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Machine Learning"
             autoFocus
-            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50 md:text-sm"
           />
         </div>
 
@@ -271,14 +277,14 @@ function AddSubjectModal({
             disabled={success}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="e.g. CSC 2853"
-            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm uppercase transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base uppercase transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50 md:text-sm"
           />
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         {success && <p className="text-sm text-green-600">Subject added successfully.</p>}
 
-        <div className="flex items-center justify-end gap-4 mt-2">
+        <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
           <button
             type="button"
             onClick={onClose}
@@ -290,7 +296,7 @@ function AddSubjectModal({
           <button
             type="submit"
             disabled={!title.trim() || !code.trim() || isSubmitting || success}
-            className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
           >
             {isSubmitting ? (
               <><Loader2 size={14} className="animate-spin" /> Adding...</>
@@ -347,21 +353,21 @@ function DeleteSubjectModal({
 
   return (
     <ModalCard onClose={onClose} disableClose={isDeleting || success}>
-      <h3 className="mb-2 text-2xl font-black tracking-tight text-ink">
+      <h3 className="text-dynamic mb-2 text-2xl font-black tracking-tight text-ink">
         Delete subject
       </h3>
-      <p className="mb-2 text-sm text-muted">
+      <p className="text-dynamic mb-2 text-sm text-muted">
         Are you sure you want to delete{' '}
         <span className="font-semibold text-ink">&quot;{subject.title}&quot;</span>?
       </p>
-      <p className="mb-6 text-sm text-muted">
+      <p className="text-dynamic mb-6 text-sm text-muted">
         This will also permanently delete its uploaded files. This action cannot
         be undone.
       </p>
 
       <label
         htmlFor="delete-subject-confirm"
-        className="mb-2 block text-sm font-semibold text-ink"
+        className="text-dynamic mb-2 block text-sm font-semibold text-ink"
       >
         Type <span className="text-ink">&quot;{subject.title}&quot;</span> to confirm
       </label>
@@ -373,13 +379,13 @@ function DeleteSubjectModal({
         onChange={(e) => setTyped(e.target.value)}
         placeholder={subject.title}
         autoFocus
-        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm transition-colors placeholder:text-muted/50 focus:border-ink focus:outline-none disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base transition-colors placeholder:text-muted/50 focus:border-ink focus:outline-none disabled:opacity-50 md:text-sm"
       />
 
       {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
       {success && <p className="text-sm text-green-600 mt-3">Subject deleted successfully.</p>}
 
-      <div className="flex items-center justify-end gap-4 mt-6">
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
         <button
           onClick={onClose}
           disabled={isDeleting || success}
@@ -390,7 +396,7 @@ function DeleteSubjectModal({
         <button
           onClick={handleDelete}
           disabled={!matches || isDeleting || success}
-          className="flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-40"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-40"
         >
           {isDeleting ? (
             <><Loader2 size={14} className="animate-spin" /> Deleting...</>
@@ -451,14 +457,14 @@ function RenameSubjectModal({
 
   return (
     <ModalCard onClose={onClose} disableClose={isSubmitting || success}>
-      <div className="flex items-start justify-between mb-6">
-        <h3 className="text-2xl font-black tracking-tight text-ink">
+        <div className="mb-6 flex min-w-0 items-start justify-between gap-4">
+        <h3 className="text-dynamic text-2xl font-black tracking-tight text-ink">
           Rename subject
         </h3>
         <button
           onClick={onClose}
           disabled={isSubmitting || success}
-          className="text-muted transition-colors hover:text-ink disabled:opacity-50"
+          className="shrink-0 text-muted transition-colors hover:text-ink disabled:opacity-50"
           aria-label="Close"
         >
           <X size={20} strokeWidth={1.5} />
@@ -481,7 +487,7 @@ function RenameSubjectModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder={subject.title}
             autoFocus
-            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50 md:text-sm"
           />
         </div>
 
@@ -499,14 +505,14 @@ function RenameSubjectModal({
             disabled={success}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder={subject.code && subject.code.toUpperCase()}
-            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm uppercase transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base uppercase transition-colors placeholder:text-muted/60 focus:border-ink focus:outline-none disabled:opacity-50 md:text-sm"
           />
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
         {success && <p className="text-sm text-green-600">Subject renamed successfully.</p>}
 
-        <div className="flex items-center justify-end gap-4 mt-2">
+        <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
           <button
             type="button"
             onClick={onClose}
@@ -518,7 +524,7 @@ function RenameSubjectModal({
           <button
             type="submit"
             disabled={!title.trim() || !code.trim() || isSubmitting || success}
-            className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
           >
             {isSubmitting ? (
               <><Loader2 size={14} className="animate-spin" /> Renaming...</>

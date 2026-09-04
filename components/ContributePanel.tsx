@@ -94,7 +94,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent"
+        className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent sm:px-5"
       >
         <ArrowUp size={16} strokeWidth={1.8} />
         Contribute a file
@@ -115,18 +115,18 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[520px]"
+              className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[520px]"
             >
-              <div className="flex-1 overflow-y-auto p-6 md:p-10">
-                <div className="mb-10 flex items-center justify-between">
-                  <div>
+              <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-10">
+                <div className="mb-10 flex min-w-0 items-center justify-between gap-4">
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-accent">New file</p>
-                    <h2 className="mt-1 text-3xl font-black tracking-tight text-ink">Share a note</h2>
+                    <h2 className="text-dynamic mt-1 text-3xl font-black tracking-tight text-ink">Share a note</h2>
                   </div>
                   <button 
                     onClick={() => setIsOpen(false)}
                     disabled={isPublished}
-                    className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink disabled:opacity-50"
+                    className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink disabled:opacity-50"
                     aria-label="Close contribution panel"
                   >
                     <X size={20} strokeWidth={1.5} />
@@ -134,13 +134,17 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                 </div>
 
                 <div className="flex flex-col gap-8">
+                  <label htmlFor="contribute-title" className="text-sm font-semibold text-ink">
+                    Archive title
+                  </label>
                   <input 
+                    id="contribute-title"
                     type="text" 
                     placeholder="Title shown in the archive" 
                     value={title}
                     disabled={isPublished}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full rounded-3xl border border-line bg-white px-5 py-4 text-2xl font-black tracking-tight text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-ink disabled:opacity-50 md:text-3xl"
+                    className="w-full min-w-0 rounded-3xl border border-line bg-white px-4 py-4 text-xl font-black tracking-tight text-ink outline-none transition-colors placeholder:text-muted/50 focus:border-ink disabled:opacity-50 sm:px-5 sm:text-2xl md:text-3xl"
                   />
 
                   <div 
@@ -169,7 +173,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                     }}
                     role="button"
                     tabIndex={0}
-                    className={`relative mt-2 flex cursor-pointer flex-col items-center justify-center gap-4 rounded-[2rem] border border-dashed p-8 text-center transition-colors md:p-12 ${isDragging ? 'border-ink bg-white' : error ? 'border-red-400 bg-red-50' : 'border-line bg-sheet hover:bg-white'}`}
+                    className={`relative mt-2 flex min-w-0 cursor-pointer flex-col items-center justify-center gap-4 rounded-[2rem] border border-dashed p-5 text-center transition-colors sm:p-8 md:p-12 ${isDragging ? 'border-ink bg-white' : error ? 'border-red-400 bg-red-50' : 'border-line bg-sheet hover:bg-white'}`}
                   >
                     <input 
                       type="file" 
@@ -191,7 +195,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                         <div className="mb-2 flex h-12 w-10 items-center justify-center rounded-xl bg-accent">
                           <FileText size={18} strokeWidth={2} className="text-white" />
                         </div>
-                        <p className="text-lg font-semibold text-ink">
+                        <p className="text-dynamic max-w-full text-base font-semibold text-ink sm:text-lg">
                           {file.name}
                         </p>
                         <p className="text-sm text-muted">
@@ -203,7 +207,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                         <div className="mb-2 flex h-12 w-10 items-center justify-center rounded-xl bg-ink">
                           <ArrowUp size={16} strokeWidth={2.5} className="text-white" />
                         </div>
-                        <p className="text-lg font-semibold text-ink">
+                        <p className="text-dynamic text-base font-semibold text-ink sm:text-lg">
                           {isDragging ? 'Drop to select.' : 'Drag document here or browse.'}
                         </p>
                         <p className="text-sm text-muted">
@@ -223,7 +227,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                 </div>
               </div>
 
-              <div className="border-t border-line p-6 md:p-10">
+              <div className="safe-x safe-y border-t border-line p-4 sm:p-6 md:p-10">
                 <button 
                   onClick={handlePublish}
                   disabled={!file || !title.trim() || isUploading || isPublished}

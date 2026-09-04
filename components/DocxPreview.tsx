@@ -58,7 +58,7 @@ export function DocxPreview({ url, title }: { url: string; title: string }) {
 
   return (
     <div
-      className="docx-content flex-1 min-h-0 overflow-y-auto p-8 md:p-10"
+      className="docx-content flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-10"
       dangerouslySetInnerHTML={{ __html: state.html }}
       aria-label={`Preview of ${title}`}
     />

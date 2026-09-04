@@ -12,8 +12,13 @@
 
 @utility page-shell {
   width: min(100%, 88rem);
+  max-width: 100%;
   margin-inline: auto;
   padding-inline: 1rem;
+}
+
+@utility responsive-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @utility text-balance {
@@ -22,6 +27,22 @@
 
 @utility text-pretty {
   text-wrap: pretty;
+}
+
+@utility text-dynamic {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@utility safe-y {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@utility safe-x {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
 
 @utility focus-ring {
@@ -43,6 +64,7 @@
   font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--color-ink);
+  overflow-wrap: anywhere;
 }
 
 .docx-content h1,
@@ -99,7 +121,9 @@
 }
 
 .docx-content table {
+  display: block;
   width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   margin: 0 0 1em;
   font-size: 0.875rem;
@@ -110,6 +134,7 @@
   border: 1px solid var(--color-line);
   padding: 0.5em 0.75em;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .docx-content th {
@@ -121,8 +146,12 @@
     background: #ffffff;
   }
 
+  html,
   body {
-    min-width: 320px;
+    min-width: 0;
+  }
+
+  body {
     background: #ffffff;
   }
 

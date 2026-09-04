@@ -27,11 +27,11 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
           }}
         />
       )}
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-muted">
+      <ol className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-muted">
         {items.map((item, index) => {
           const isLast = index === items.length - 1
           return (
-            <li key={index} className="flex items-center gap-2">
+            <li key={index} className="flex min-w-0 max-w-full items-center gap-2">
               {index > 0 && (
                 <span aria-hidden="true" className="text-neutral-300">
                   →
@@ -41,7 +41,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
                 <span
                   aria-current={isLast ? 'page' : undefined}
                   className={
-                    isLast ? 'text-ink' : 'text-muted'
+                    isLast ? 'text-dynamic max-w-full text-ink' : 'text-dynamic max-w-full text-muted'
                   }
                 >
                   {item.label}
@@ -49,7 +49,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
               ) : (
                 <Link
                   href={item.href}
-                  className="text-muted transition-colors hover:text-ink"
+                  className="rounded-md py-1 text-dynamic max-w-full text-muted transition-colors hover:text-ink"
                 >
                   {item.label}
                 </Link>

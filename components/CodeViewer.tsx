@@ -49,7 +49,7 @@ export function CodeViewer({ url }: { url: string }) {
   }
 
   return (
-    <pre className="code-viewer flex-1 min-h-0 overflow-auto p-8 md:p-10 m-0">
+    <pre className="code-viewer m-0 flex-1 min-h-0 overflow-auto p-4 sm:p-6 md:p-10">
       <code>{state.text}</code>
     </pre>
   );

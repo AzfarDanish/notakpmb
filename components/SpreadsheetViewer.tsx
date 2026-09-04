@@ -69,12 +69,12 @@ export function SpreadsheetViewer({ url }: { url: string }) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="shrink-0 px-8 md:px-10 pt-6 pb-4">
+      <div className="shrink-0 px-4 pb-3 pt-4 sm:px-6 md:px-10 md:pb-4 md:pt-6">
         <p className="text-xs font-semibold text-muted">
           {state.sheetName}
         </p>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto px-8 md:px-10 pb-8 md:pb-10">
+      <div className="flex-1 min-h-0 overflow-auto px-3 pb-4 sm:px-4 sm:pb-6 md:px-10 md:pb-10">
         <table className="docx-content w-full border-collapse text-sm">
           <tbody>
             {state.rows.map((row, rowIndex) => (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Search, Loader2, ArrowRight } from 'lucide-react'
 
@@ -30,10 +30,13 @@ export function CourseLookup({
   const [error, setError] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [, startTransition] = useTransition()
+  const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const requestSeq = useRef(0)
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null)
+  const [placeAbove, setPlaceAbove] = useState(false)
 
   // debounce fetch
   useEffect(() => {
@@ -91,12 +94,39 @@ export function CourseLookup({
 
   // close on outside click
   useEffect(() => {
-    function onDown(e: MouseEvent) {
+    function onDown(e: PointerEvent) {
       if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
     }
-    window.addEventListener('mousedown', onDown)
-    return () => window.removeEventListener('mousedown', onDown)
+    window.addEventListener('pointerdown', onDown)
+    return () => window.removeEventListener('pointerdown', onDown)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+
+    function updateMenuGeometry() {
+      const input = inputRef.current
+      if (!input) return
+      const rect = input.getBoundingClientRect()
+      const visualHeight = window.visualViewport?.height ?? window.innerHeight
+      const spaceBelow = visualHeight - rect.bottom - 12
+      const spaceAbove = rect.top - 12
+      const shouldPlaceAbove = spaceBelow < 220 && spaceAbove > spaceBelow
+      setPlaceAbove(shouldPlaceAbove)
+      setMenuMaxHeight(Math.max(180, Math.floor((shouldPlaceAbove ? spaceAbove : spaceBelow) - 8)))
+    }
+
+    updateMenuGeometry()
+    window.addEventListener('resize', updateMenuGeometry)
+    window.visualViewport?.addEventListener('resize', updateMenuGeometry)
+    window.visualViewport?.addEventListener('scroll', updateMenuGeometry)
+
+    return () => {
+      window.removeEventListener('resize', updateMenuGeometry)
+      window.visualViewport?.removeEventListener('resize', updateMenuGeometry)
+      window.visualViewport?.removeEventListener('scroll', updateMenuGeometry)
+    }
+  }, [open, hits.length])
 
   function onKeyDown(e: React.KeyboardEvent) {
     if (!open) return
@@ -121,7 +151,7 @@ export function CourseLookup({
   const selected = activeIndex >= 0 ? hits[activeIndex] : null
 
   return (
-    <div ref={containerRef} className={`relative ${isLarge ? 'w-full' : 'w-full md:w-80'}`}>
+    <div ref={containerRef} className={`relative min-w-0 ${isLarge ? 'w-full' : 'w-full md:w-80'}`}>
       <div className={`relative flex items-center ${isLarge ? 'w-full' : 'w-full'}`}>
         <Search
           size={isLarge ? 20 : 16}
@@ -139,13 +169,14 @@ export function CourseLookup({
           placeholder={placeholder}
           aria-label="Search courses by name or code"
           aria-expanded={open}
-          aria-controls="course-lookup-listbox"
+          aria-controls={listboxId}
           aria-autocomplete="list"
+          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
           role="combobox"
           autoFocus={autoFocus}
           autoComplete="off"
           className={`w-full rounded-2xl border border-line bg-white/80 pl-11 text-ink transition-colors placeholder:text-muted/60 focus:border-ink focus:bg-white focus:outline-none ${
-            isLarge ? 'py-4 pr-14 text-base' : 'py-3 pr-12 text-sm'
+            isLarge ? 'py-4 pr-14 text-base' : 'py-3 pr-12 text-base md:text-sm'
           }`}
         />
         <div className="absolute right-3 flex items-center gap-2">
@@ -162,14 +193,17 @@ export function CourseLookup({
       {selected && open && (
         <div className="mt-3 hidden items-center gap-3 rounded-2xl bg-sheet px-4 py-3 text-xs text-muted md:flex">
           <span className="font-bold text-accent">{selected.code}</span>
-          <span className="font-semibold text-ink">{selected.title}</span>
+          <span className="min-w-0 flex-1 truncate font-semibold text-ink">{selected.title}</span>
           <span className="text-muted/70">· {selected.programme.code}</span>
           <ArrowRight size={14} className="ml-auto text-muted" />
         </div>
       )}
 
       {open && (
-        <div className="absolute left-0 right-0 z-40 mt-2 max-h-[22rem] overflow-auto rounded-3xl border border-line bg-white shadow-[0_24px_80px_rgba(23,20,17,0.14)]">
+        <div
+          className={`absolute left-0 right-0 z-40 max-w-full overflow-auto rounded-3xl border border-line bg-white shadow-[0_24px_80px_rgba(23,20,17,0.14)] ${placeAbove ? 'bottom-[calc(100%+0.5rem)]' : 'top-[calc(100%+0.5rem)]'}`}
+          style={menuMaxHeight ? { maxHeight: `${menuMaxHeight}px` } : undefined}
+        >
           {loading && hits.length === 0 && (
             <div className="flex items-center justify-center gap-2 px-5 py-8 text-sm font-semibold text-muted">
               <Loader2 size={16} className="animate-spin" aria-hidden="true" />
@@ -189,20 +223,20 @@ export function CourseLookup({
             </div>
           )}
           {hits.length > 0 && (
-            <ul id="course-lookup-listbox" ref={listRef} role="listbox" className="py-2">
+            <ul id={listboxId} ref={listRef} role="listbox" className="py-2">
               {hits.map((hit, idx) => {
                 const isActive = idx === activeIndex
                 return (
-                  <li key={hit.id} role="option" aria-selected={isActive}>
+                  <li key={hit.id} id={`${listboxId}-option-${idx}`} role="option" aria-selected={isActive}>
                     <Link
                       href={hit.href}
                       onMouseEnter={() => setActiveIndex(idx)}
-                      className={`flex items-start justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-soft ${isActive ? 'bg-soft' : ''}`}
+                      className={`flex min-w-0 items-start justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-soft sm:gap-4 sm:px-5 ${isActive ? 'bg-soft' : ''}`}
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block text-xs font-bold text-accent">{hit.code}</span>
-                        <span className="mt-0.5 block text-base font-semibold leading-tight text-ink md:text-lg">{highlight(hit.title, query)}</span>
-                        <span className="mt-1 block text-xs text-muted">{hit.programme.code} · {hit.programme.title}</span>
+                        <span className="text-dynamic mt-0.5 block text-base font-semibold leading-tight text-ink md:text-lg">{highlight(hit.title, query)}</span>
+                        <span className="text-dynamic mt-1 block text-xs text-muted">{hit.programme.code} · {hit.programme.title}</span>
                       </span>
                       <ArrowRight size={16} strokeWidth={1.5} className={`mt-2 shrink-0 ${isActive ? 'text-ink' : 'text-muted/40'}`} aria-hidden="true" />
                     </Link>
@@ -211,8 +245,8 @@ export function CourseLookup({
               })}
             </ul>
           )}
-          <div className="flex items-center justify-between border-t border-line/70 px-5 py-2.5 text-xs font-medium text-muted">
-            <span>{loading ? 'Searching live courses...' : `${hits.length} course${hits.length === 1 ? '' : 's'}`}</span>
+          <div className="flex min-w-0 items-center justify-between gap-3 border-t border-line/70 px-4 py-2.5 text-xs font-medium text-muted sm:px-5">
+            <span className="text-dynamic min-w-0">{loading ? 'Searching live courses...' : `${hits.length} course${hits.length === 1 ? '' : 's'}`}</span>
             <Link href={hits[0]?.href ?? '/search?q='+encodeURIComponent(query.trim())} className="transition-colors hover:text-ink">
               {hits[0] ? 'Open first' : 'Search page'}
             </Link>

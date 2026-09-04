@@ -8,7 +8,7 @@ export function ImageViewer({ url, title }: { url: string; title: string }) {
 
   return (
     <div className="flex-1 min-h-0 overflow-auto bg-neutral-50 relative">
-      <div className="min-h-full flex items-center justify-center p-8">
+      <div className="min-h-full flex items-center justify-center p-3 sm:p-4 md:p-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}

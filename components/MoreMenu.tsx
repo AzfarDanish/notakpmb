@@ -100,7 +100,7 @@ export function MoreMenu({
         aria-expanded={open}
         aria-label={label}
         title={label}
-        className="rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-sheet hover:text-ink"
       >
         <MoreHorizontal size={18} strokeWidth={1.5} />
       </button>
@@ -123,7 +123,7 @@ export function MoreMenu({
                   zIndex: 50,
                   visibility: pos ? 'visible' : 'hidden',
                 }}
-                className="min-w-44 rounded-2xl border border-line bg-white py-2 shadow-[0_18px_60px_rgba(23,20,17,0.14)]"
+                className="max-h-[min(24rem,calc(100dvh-1rem))] min-w-44 overflow-y-auto rounded-2xl border border-line bg-white py-2 shadow-[0_18px_60px_rgba(23,20,17,0.14)]"
               >
                 {items.map((item) => (
                   <button
