@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+    <main id="main" className="page-shell">
       <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Privacy Policy' }]} />
 
       <article className="mt-8 min-w-0 max-w-3xl">

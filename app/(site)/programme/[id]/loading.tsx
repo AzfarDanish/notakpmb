@@ -3,7 +3,7 @@ import { Skeleton, StatsSkeleton, SubjectListSkeleton } from '@/components/Skele
 
 export default function Loading() {
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+    <main id="main" className="page-shell">
       <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Programme' }]} />
       <section className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-14">
         <div className="min-w-0 space-y-5">

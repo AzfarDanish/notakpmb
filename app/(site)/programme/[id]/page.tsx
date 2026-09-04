@@ -2,10 +2,9 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { Search } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { getAllFileCounts, isR2Configured } from '@/lib/r2';
 import { getProgramme, getSubjectsForProgramme } from '@/lib/subjects';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { CourseLookup } from '@/components/CourseLookup';
 import { SubjectList } from '@/components/SubjectList';
 import { StatsSkeleton, SubjectListSkeleton } from '@/components/Skeleton';
@@ -78,13 +77,16 @@ export default async function ProgrammePage({
   }
 
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
-      <Breadcrumbs
-        items={[
-          { label: 'Index', href: '/' },
-          { label: programme.title },
-        ]}
-      />
+    <main id="main" className="page-shell">
+      <div className="min-w-0">
+        <Link
+          href="/"
+          className="inline-flex max-w-full min-h-11 items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-ink"
+        >
+          <ArrowLeft size={16} strokeWidth={1.7} className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0 truncate">Back to Index</span>
+        </Link>
+      </div>
 
       <section className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-14">
         <div className="min-w-0">

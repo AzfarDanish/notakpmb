@@ -11,10 +11,11 @@
 }
 
 @utility page-shell {
+  --page-padding: 1.5rem;
   width: min(100%, 88rem);
   max-width: 100%;
   margin-inline: auto;
-  padding-inline: 1rem;
+  padding: var(--page-padding);
 }
 
 @utility responsive-grid {
@@ -193,9 +194,27 @@
     font: inherit;
   }
 
+  @media (min-width: 640px) {
+    .page-shell {
+      --page-padding: 3rem;
+    }
+  }
+
   @media (min-width: 768px) {
     .page-shell {
-      padding-inline: 2rem;
+      --page-padding: 5.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .page-shell {
+      --page-padding: 8.5rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .page-shell {
+      --page-padding: 11rem;
     }
   }
 }

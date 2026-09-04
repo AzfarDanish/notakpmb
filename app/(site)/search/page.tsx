@@ -89,7 +89,7 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+    <main id="main" className="page-shell">
       <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Search' }]} />
 
       <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:gap-14">

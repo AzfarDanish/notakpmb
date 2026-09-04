@@ -2,7 +2,7 @@ import { ProgrammeListSkeleton } from '@/components/Skeleton'
 
 export default function Loading() {
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+    <main id="main" className="page-shell">
       <div className="grid min-w-0 gap-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-16">
         <section className="min-w-0">
           <div className="h-8 w-32 rounded-full bg-line/70 motion-safe:animate-pulse" />

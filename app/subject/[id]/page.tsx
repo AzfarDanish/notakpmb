@@ -1,6 +1,7 @@
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { ContributePanel } from '@/components/ContributePanel';
 import { DocumentSection } from '@/components/DocumentSection';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { FileListSkeleton, Skeleton } from '@/components/Skeleton';
 import { getSubjectWithCustom } from '@/lib/subjects';
 import { getSubjectDocuments } from '@/lib/r2';
@@ -55,16 +56,18 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
   return (
     <main
       id="main"
-      className="page-shell py-6 md:py-12 xl:py-14"
+      className="page-shell"
     >
-      <div>
-        <Breadcrumbs
-          items={[
-            { label: 'Index', href: '/' },
-            { label: programme.code, href: `/programme/${programme.id}` },
-            { label: subject.title },
-          ]}
-        />
+      <div className="min-w-0">
+        <Link
+          href={`/programme/${programme.id}`}
+          className="inline-flex max-w-full min-h-11 items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-ink"
+        >
+          <ArrowLeft size={16} strokeWidth={1.7} className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0 truncate">
+            Back to {programme.title.replace(/^(Diploma|Certificate) in\s+/i, '')}
+          </span>
+        </Link>
       </div>
 
       <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)] xl:gap-14">

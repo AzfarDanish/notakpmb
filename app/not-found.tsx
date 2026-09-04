@@ -12,7 +12,7 @@ export default function NotFound() {
   return (
     <main
       id="main"
-      className="page-shell flex min-h-[70vh] min-w-0 flex-col items-start justify-center py-16 md:py-24"
+      className="page-shell flex min-h-[70vh] min-w-0 flex-col items-start justify-center"
     >
       <p className="mb-4 text-sm font-bold text-accent">404</p>
       <h1 className="text-dynamic max-w-4xl text-4xl font-black leading-[0.98] tracking-[-0.05em] text-balance sm:text-5xl md:text-7xl">

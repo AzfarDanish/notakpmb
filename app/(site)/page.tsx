@@ -61,15 +61,11 @@ async function CatalogCount() {
 
 export default function Home() {
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+    <main id="main" className="page-shell">
       <div className="grid min-w-0 gap-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-16">
         <section className="min-w-0 xl:sticky xl:top-10 xl:h-fit">
-          <Link href="/" className="inline-flex text-2xl font-black tracking-tight text-ink">
-            NotaKPMB
-          </Link>
-
-          <div className="mt-8 md:mt-12 xl:mt-16">
-            <h1 className="text-dynamic max-w-2xl text-4xl font-black leading-[0.94] tracking-[-0.06em] text-balance xs:text-[2.8rem] sm:text-5xl md:text-6xl xl:text-7xl 2xl:text-8xl">
+          <div className="pt-[0.02em]">
+            <h1 className="text-dynamic max-w-2xl text-4xl font-black leading-[0.94] tracking-[-0.06em] text-balance xs:text-[2.8rem] sm:text-5xl md:text-6xl xl:text-7xl 2xl:text-8xl -mt-[0.09em] block">
               Find the note before class starts.
             </h1>
             <p className="text-dynamic mt-6 max-w-md text-base leading-7 text-muted">

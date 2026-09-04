@@ -27,7 +27,7 @@ export async function Footer() {
 
   return (
     <footer className="-mt-[0.12em] w-full min-w-0 bg-[#111111] text-white">
-      <div className="page-shell py-10 md:py-14">
+      <div className="page-shell">
         <div className="grid min-w-0 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-10">
           <div className="min-w-0">
             <h3 className="text-2xl font-black tracking-tight">NotaKPMB</h3>

@@ -7,7 +7,7 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
+    <main id="main" className="page-shell">
       <div className="rounded-[1.75rem] bg-sheet px-6 py-10 text-center md:px-10">
         <p className="text-xl font-semibold tracking-tight text-ink">Couldn&apos;t load this section</p>
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">

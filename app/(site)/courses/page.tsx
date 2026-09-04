@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { getAllCourses } from '@/lib/courses'
 import { getProgrammes } from '@/lib/subjects'
-import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { CourseLookup } from '@/components/CourseLookup'
 import { CourseGroupsSkeleton } from '@/components/Skeleton'
 
@@ -77,8 +76,16 @@ async function CourseGroups() {
 
 export default function CoursesPage() {
   return (
-    <main id="main" className="page-shell py-6 md:py-12 xl:py-14">
-      <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Courses' }]} />
+    <main id="main" className="page-shell">
+      <div className="min-w-0">
+        <Link
+          href="/"
+          className="inline-flex max-w-full min-h-11 items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-ink"
+        >
+          <ArrowLeft size={16} strokeWidth={1.7} className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0 truncate">Back to Index</span>
+        </Link>
+      </div>
 
       <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:gap-14">
         <section className="min-w-0">
