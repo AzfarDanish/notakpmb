@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { ArrowRight, BookOpen, Search } from 'lucide-react';
+import { ArrowRight, BookOpen, MessageSquarePlus, Search } from 'lucide-react';
 import { getAllFileCounts } from '@/lib/r2';
 import { getProgrammes } from '@/lib/subjects';
 import { getAllCourses } from '@/lib/courses';
@@ -75,7 +75,7 @@ export default function Home() {
 
           <div className="mt-8 max-w-xl rounded-[1.75rem] bg-sheet p-3 md:mt-9 md:rounded-[2rem] md:p-4">
             <CourseLookup size="lg" placeholder="Type a subject or code" />
-            <div className="mt-3 flex flex-wrap gap-2 px-1">
+            <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
               <Link href="/courses" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
                 <BookOpen size={16} strokeWidth={1.7} />
                 <Suspense fallback="Courses">
@@ -85,6 +85,10 @@ export default function Home() {
               <Link href="/search" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
                 <Search size={16} strokeWidth={1.7} />
                 Search files
+              </Link>
+              <Link href="/feedback" className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-accent">
+                <MessageSquarePlus size={16} strokeWidth={1.7} />
+                Feedback
               </Link>
             </div>
           </div>

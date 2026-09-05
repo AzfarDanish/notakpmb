@@ -21,11 +21,15 @@ export function CourseLookup({
   autoFocus = false,
   size = 'lg',
   programmeId,
+  localSubjects,
+  localProgramme,
 }: {
   placeholder?: string
   autoFocus?: boolean
   size?: 'sm' | 'lg'
   programmeId?: string
+  localSubjects?: { id: string; title: string; code: string }[]
+  localProgramme?: { id: string; code: string; title: string }
 }) {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<CourseHit[]>([])
@@ -43,7 +47,9 @@ export function CourseLookup({
   const [menuMaxHeight, setMenuMaxHeight] = useState<number | null>(null)
   const [placeAbove, setPlaceAbove] = useState(false)
 
-  // debounce fetch
+  const isLocalMode = localSubjects !== undefined
+
+  // debounce fetch (or local filter when localSubjects is provided)
   useEffect(() => {
     const q = query.trim()
     const seq = ++requestSeq.current
@@ -58,6 +64,39 @@ export function CourseLookup({
         setActiveIndex(-1)
       })
       return
+    }
+
+    // Local mode: filter only the added subjects passed in — no API call,
+    // so non-added catalog courses can never appear here.
+    if (isLocalMode) {
+      setOpen(true)
+      const t = setTimeout(() => {
+        if (seq !== requestSeq.current) return
+        const needle = q.toLowerCase()
+        const programme = localProgramme ?? { id: programmeId ?? '', code: '', title: '' }
+        const filtered: CourseHit[] = (localSubjects ?? [])
+          .filter(
+            (s) =>
+              s.title.toLowerCase().includes(needle) ||
+              s.code.toLowerCase().includes(needle),
+          )
+          .slice(0, 8)
+          .map((s) => ({
+            id: s.id,
+            code: s.code,
+            title: s.title,
+            programme,
+            href: `/subject/${s.id}`,
+          }))
+        startTransition(() => {
+          setHits(filtered)
+          setOpen(true)
+          setLoading(false)
+          setActiveIndex(-1)
+          setError(false)
+        })
+      }, 120)
+      return () => clearTimeout(t)
     }
 
     const cacheKey = `${programmeId ?? ''}:${q.toLowerCase()}`
@@ -117,7 +156,7 @@ export function CourseLookup({
       clearTimeout(t)
       clearTimeout(skeletonTimer)
     }
-  }, [query, programmeId, startTransition])
+  }, [query, programmeId, localSubjects, localProgramme, isLocalMode, startTransition])
 
   // close on outside click
   useEffect(() => {
@@ -240,8 +279,16 @@ export function CourseLookup({
           )}
           {!error && hits.length === 0 && !loading && (
             <div className="px-5 py-8 text-center">
-              <p className="text-sm font-semibold text-ink">No course found for “{query.trim()}”</p>
-              <p className="mt-1 text-xs text-muted">Try a code like CSC 1383 or a word like Database.</p>
+              <p className="text-sm font-semibold text-ink">
+                {isLocalMode
+                  ? `No added course found for “${query.trim()}”`
+                  : `No course found for “${query.trim()}”`}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {isLocalMode
+                  ? 'Only subjects added to this programme are searchable here.'
+                  : 'Try a code like CSC 1383 or a word like Database.'}
+              </p>
             </div>
           )}
           {hits.length > 0 && (
@@ -268,10 +315,26 @@ export function CourseLookup({
             </ul>
           )}
           <div className="flex min-w-0 items-center justify-between gap-3 border-t border-line/70 px-4 py-2.5 text-xs font-medium text-muted sm:px-5">
-            <span className="text-dynamic min-w-0">{loading ? 'Searching live courses...' : `${hits.length} course${hits.length === 1 ? '' : 's'}`}</span>
-            <Link href={hits[0]?.href ?? '/search?q='+encodeURIComponent(query.trim())} className="transition-colors hover:text-ink">
-              {hits[0] ? 'Open first' : 'Search page'}
-            </Link>
+            <span className="text-dynamic min-w-0">
+              {loading
+                ? isLocalMode
+                  ? 'Searching added courses...'
+                  : 'Searching live courses...'
+                : isLocalMode
+                  ? `${hits.length} added result${hits.length === 1 ? '' : 's'}`
+                  : `${hits.length} course${hits.length === 1 ? '' : 's'}`}
+            </span>
+            {isLocalMode ? (
+              hits[0] ? (
+                <Link href={hits[0].href} className="transition-colors hover:text-ink">
+                  Open first
+                </Link>
+              ) : null
+            ) : (
+              <Link href={hits[0]?.href ?? '/search?q='+encodeURIComponent(query.trim())} className="transition-colors hover:text-ink">
+                {hits[0] ? 'Open first' : 'Search page'}
+              </Link>
+            )}
           </div>
         </div>
       )}

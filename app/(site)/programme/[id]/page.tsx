@@ -52,6 +52,23 @@ async function ProgrammeStats({ id }: { id: string }) {
   );
 }
 
+async function ProgrammeSearch({ id }: { id: string }) {
+  const [programme, subjects] = await Promise.all([
+    getProgramme(id),
+    getSubjectsForProgramme(id),
+  ]);
+  if (!programme) return null;
+  return (
+    <CourseLookup
+      size="sm"
+      placeholder="Search added courses..."
+      programmeId={id}
+      localSubjects={subjects}
+      localProgramme={{ id: programme.id, code: programme.code, title: programme.title }}
+    />
+  );
+}
+
 async function ProgrammeSubjects({ id, programmeTitle }: { id: string; programmeTitle: string }) {
   const subjects = await getSubjectsForProgramme(id);
   return (
@@ -104,7 +121,9 @@ export default async function ProgrammePage({
             <ProgrammeStats id={id} />
           </Suspense>
           <div className="mt-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-stretch">
-            <CourseLookup size="sm" placeholder="Search course name or code" />
+            <Suspense fallback={<div className="h-[46px] w-full animate-pulse rounded-2xl bg-white/70 md:w-80" aria-hidden="true" />}>
+              <ProgrammeSearch id={id} />
+            </Suspense>
             <Link href="/search" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-paper sm:shrink-0">
               <Search size={16} strokeWidth={1.7} />
               Search page

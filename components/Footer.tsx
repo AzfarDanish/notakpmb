@@ -54,6 +54,11 @@ export async function Footer() {
                   Search
                 </Link>
               </li>
+              <li>
+                <Link href="/feedback" className="text-white/65 transition-colors hover:text-white">
+                  Feedback
+                </Link>
+              </li>
             </ul>
           </div>
 
