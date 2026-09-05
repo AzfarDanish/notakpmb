@@ -30,15 +30,15 @@ function ModalCard({
   return (
     <div
       onClick={() => !disableClose && onClose()}
-      className="fixed inset-0 z-50 overflow-y-auto bg-ink/10 p-3 backdrop-blur-sm sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
     >
       <div
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-auto rounded-[2rem] border border-line bg-white p-5 shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-h-[calc(100dvh-2rem)] sm:p-6 md:p-8"
+        className="relative flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
       >
-        {children}
+        <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">{children}</div>
       </div>
     </div>
   )

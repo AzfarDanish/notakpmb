@@ -166,7 +166,7 @@ function ModalCard({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={() => !disableClose && onClose()}
-        className="fixed inset-0 z-50 overflow-y-auto bg-ink/10 p-3 backdrop-blur-sm sm:p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -175,10 +175,9 @@ function ModalCard({
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          className="my-auto w-full max-w-md rounded-[2rem] border border-line bg-white p-5 shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:p-6 md:p-8"
-          style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+          className="relative flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
         >
-      <div className="min-w-0 max-h-[calc(100dvh-5rem)] overflow-y-auto">{children}</div>
+          <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">{children}</div>
         </motion.div>
       </motion.div>
     </>

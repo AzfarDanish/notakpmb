@@ -182,17 +182,17 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[min(900px,78vw)]"
+              className="fixed inset-4 z-50 flex max-h-[calc(100dvh-2rem)] w-auto max-w-full flex-col overflow-hidden rounded-[1.5rem] bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:inset-y-0 md:right-0 md:left-auto md:top-0 md:bottom-0 md:m-0 md:max-h-none md:h-auto md:max-h-none md:w-[min(900px,78vw)] md:rounded-none md:rounded-l-[1.5rem]"
             >
-              <div className="safe-x safe-y flex h-full flex-col p-4 md:p-8">
-                <div className="mb-5 flex shrink-0 flex-wrap items-center justify-between gap-3 sm:flex-nowrap sm:gap-4">
+              <div className="safe-x safe-y flex h-full flex-col overflow-hidden p-4 md:p-8">
+                <div className="mb-4 flex shrink-0 items-center justify-between gap-3 sm:mb-5 sm:gap-4">
                   <span className="min-w-0 flex-1 truncate pr-2 text-base font-black tracking-tight text-ink sm:text-lg">
                     {previewItem.title}
                   </span>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                     <a
                       href={previewItem.downloadUrl}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-sheet text-ink transition-colors hover:bg-white sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-semibold"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sheet text-ink transition-colors hover:bg-white sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-semibold"
                       title="Download"
                       aria-label="Download"
                     >
@@ -201,7 +201,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                     </a>
                     <button 
                       onClick={() => setPreviewItem(null)}
-                    className="shrink-0 rounded-full p-2 text-muted transition-colors hover:bg-sheet hover:text-ink"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-sheet hover:text-ink"
                       aria-label="Close preview"
                     >
                       <X size={20} strokeWidth={1.5} />
@@ -238,7 +238,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isDeleting && !deleteSuccess && setDeleteItem(null)}
-                className="fixed inset-0 z-50 overflow-y-auto bg-ink/10 p-3 backdrop-blur-sm sm:p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
             >
               <motion.div 
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -247,9 +247,9 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
-                className="my-auto w-full max-w-md rounded-[2rem] border border-line bg-white p-5 shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:p-6 md:p-8"
-                style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+                className="relative flex max-h-[min(85dvh,640px)] min-h-[min(60dvh,420px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
               >
+                <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">
                 <h3 className="text-dynamic mb-2 text-2xl font-black tracking-tight text-ink">Delete document</h3>
                 <p className="text-dynamic mb-8 text-sm leading-6 text-muted">
                   Delete <span className="font-semibold text-ink">&quot;{deleteItem.title}&quot;</span>? This cannot be undone.
@@ -277,6 +277,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                   >
                     {isDeleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : deleteSuccess ? <><Check size={14} /> Deleted</> : 'Delete'}
                   </button>
+                </div>
                 </div>
               </motion.div>
             </motion.div>

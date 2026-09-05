@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Breadcrumbs } from '@/components/Breadcrumbs'
 
 export const metadata: Metadata = {
   title: 'Terms and Conditions',
@@ -11,9 +10,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <main id="main" className="page-shell">
-      <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Terms and Conditions' }]} />
-
-      <article className="mt-8 min-w-0 max-w-3xl">
+      <article className="min-w-0 max-w-3xl">
         <p className="text-sm font-bold text-accent">Legal</p>
         <h1 className="text-dynamic mt-2 text-4xl font-black leading-[0.98] tracking-[-0.04em] text-balance sm:text-5xl md:text-6xl">Terms and Conditions for NotaKPMB</h1>
         <p className="mt-4 text-sm text-muted">Last updated: 4 September 2026</p>

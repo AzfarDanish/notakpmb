@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { searchArchiveWithCustom } from '@/lib/subjects';
 import { CourseLookup } from '@/components/CourseLookup';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { EmptyState } from '@/components/EmptyState';
 import { SearchResultsSkeleton } from '@/components/Skeleton';
 
@@ -90,9 +89,7 @@ export default async function SearchPage({
   const query = q?.trim() ?? '';
   return (
     <main id="main" className="page-shell">
-      <Breadcrumbs items={[{ label: 'Index', href: '/' }, { label: 'Search' }]} />
-
-      <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:gap-14">
+      <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:gap-14">
         <section className="min-w-0">
           <h1 className="text-dynamic max-w-xl text-4xl font-black leading-[0.94] tracking-[-0.05em] text-balance sm:text-5xl md:text-6xl xl:text-7xl">
             Search courses.
