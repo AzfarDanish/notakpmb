@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
-import { isD1Configured } from '@/lib/d1';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import {
   createFeedback,
   deleteFeedback,
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isD1Configured()) {
-    return NextResponse.json({ error: 'D1 not configured' }, { status: 503 });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
   let body: string;

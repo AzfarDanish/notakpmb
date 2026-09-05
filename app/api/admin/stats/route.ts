@@ -4,7 +4,7 @@ import { getProgrammes, getSubjectsForProgramme } from '@/lib/subjects';
 import { getAllFileCounts } from '@/lib/r2';
 import { getFeedbackCounts, listFeedback } from '@/lib/feedback';
 import { listActivity } from '@/lib/admin';
-import { queryD1 } from '@/lib/d1';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req);
@@ -31,8 +31,14 @@ export async function GET(req: NextRequest) {
     ]);
     let recentUploads: { key: string; subjectId: string }[] = [];
     try {
-      const res = await queryD1(`SELECT key, subject_id FROM files WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 5`);
-      recentUploads = res.results.map((r) => ({ key: String(r.key ?? ''), subjectId: String(r.subject_id ?? '') }));
+      const { data, error } = await supabaseAdmin()
+        .from('files')
+        .select('key, subject_id')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      recentUploads = ((data ?? []) as { key: string; subject_id: string }[]).map((r) => ({ key: String(r.key ?? ''), subjectId: String(r.subject_id ?? '') }));
     } catch {
       recentUploads = [];
     }

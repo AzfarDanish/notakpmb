@@ -33,6 +33,6 @@ export function setFeedbackIdentityCookie(response: NextResponse, raw: string) {
 }
 
 function hashFeedbackIdentity(value: string): string {
-  const salt = process.env.FEEDBACK_COOKIE_SALT ?? process.env.D1_DATABASE_ID ?? 'notakpmb-feedback';
+  const salt = process.env.FEEDBACK_COOKIE_SALT ?? process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'notakpmb-feedback';
   return createHash('sha256').update(`${salt}:${value}`).digest('hex');
 }

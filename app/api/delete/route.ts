@@ -21,6 +21,20 @@ export async function DELETE(req: NextRequest) {
 
     await client.send(command);
 
+    // Best-effort index cleanup (never fails the delete).
+    try {
+      const { supabaseAdmin } = await import('@/lib/supabase');
+      await supabaseAdmin().from('files').upsert({
+        key,
+        subject_id: key.split('/')[0] ?? '',
+        deleted_at: new Date().toISOString(),
+      }, { onConflict: 'key' });
+      const { logActivity } = await import('@/lib/admin');
+      await logActivity('file.deleted', 'file', key, '');
+    } catch {
+      // index/activity writes must never break deletes
+    }
+
     revalidateTag('r2-files', 'max');
 
     return NextResponse.json({ success: true });

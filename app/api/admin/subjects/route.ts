@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { logActivity, requireAdmin } from '@/lib/admin';
 import { addSubject, deleteSubject, renameSubject } from '@/lib/subjects';
-import { queryD1 } from '@/lib/d1';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getAllFileCounts } from '@/lib/r2';
 
 export async function GET(req: NextRequest) {
@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
     const programmes = await getProgrammes();
     const fileCounts = await getAllFileCounts().catch(() => ({} as Record<string, number>));
     const out: { id: string; title: string; code: string; programmeId: string; programmeTitle: string; fileCount: number; hidden: boolean }[] = [];
-    const hiddenRows = await queryD1(`SELECT subject_id FROM subjects WHERE kind = 'hidden'`).then((r) => new Set(r.results.map((x) => String(x.subject_id ?? '')))).catch(() => new Set<string>());
+    const hiddenRows = await supabaseAdmin().from('subjects').select('subject_id').eq('kind', 'hidden').then(
+      (res) => new Set(((res.data ?? []) as { subject_id: string }[]).map((x) => String(x.subject_id ?? ''))),
+      () => new Set<string>(),
+    );
     for (const p of programmes) {
       if (programmeId && p.id !== programmeId) continue;
       const subs = await getSubjectsForProgramme(p.id).catch(() => []);
@@ -70,10 +73,16 @@ export async function PATCH(req: NextRequest) {
   }
   try {
     if (typeof payload.hidden === 'boolean') {
+      const sb = supabaseAdmin();
       if (payload.hidden) {
-        await queryD1(`INSERT INTO subjects (id, subject_id, kind) VALUES (?, ?, 'hidden') ON CONFLICT(id) DO NOTHING`, [`hidden:${payload.id}`, payload.id]);
+        const { error } = await sb.from('subjects').upsert(
+          { id: `hidden:${payload.id}`, subject_id: payload.id, kind: 'hidden' },
+          { onConflict: 'id', ignoreDuplicates: true },
+        );
+        if (error) throw error;
       } else {
-        await queryD1(`DELETE FROM subjects WHERE id = ? AND kind = 'hidden'`, [`hidden:${payload.id}`]);
+        const { error } = await sb.from('subjects').delete().eq('id', `hidden:${payload.id}`).eq('kind', 'hidden');
+        if (error) throw error;
       }
       await logActivity(payload.hidden ? 'subject.hidden' : 'subject.unhidden', 'subject', payload.id, '');
       revalidateTag('subjects', 'max');
@@ -101,7 +110,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: `Subject has ${count} file(s). Confirm destructive delete.`, needsConfirm: true, fileCount: count }, { status: 409 });
     }
     const result = await deleteSubject(id);
-    await queryD1(`DELETE FROM subjects WHERE id = ? AND kind = 'hidden'`, [`hidden:${id}`]).catch(() => undefined);
+    await supabaseAdmin().from('subjects').delete().eq('id', `hidden:${id}`).eq('kind', 'hidden').then(() => undefined, () => undefined);
     await logActivity('subject.deleted', 'subject', id, `files:${result.deletedFiles}`);
     revalidateTag('subjects', 'max');
     revalidateTag('r2-files', 'max');

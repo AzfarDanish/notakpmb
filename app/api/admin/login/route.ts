@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminSession, isAdminConfigured, logActivity, setAdminCookie, verifyPassword } from '@/lib/admin';
+import { supabaseServer } from '@/lib/supabase';
+import { logActivity } from '@/lib/admin';
 import { incrementRateLimit } from '@/lib/feedback';
 
 function clientIp(req: NextRequest): string {
@@ -7,17 +8,16 @@ function clientIp(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminConfigured()) {
-    return NextResponse.json({ error: 'Admin not configured. Set ADMIN_PASSWORD_HASH or ADMIN_PASSWORD.' }, { status: 503 });
-  }
+  let email = '';
   let password = '';
   try {
-    const body = (await req.json()) as { password?: unknown };
+    const body = (await req.json()) as { email?: unknown; password?: unknown };
+    email = typeof body.email === 'string' ? body.email.trim().slice(0, 320) : '';
     password = typeof body.password === 'string' ? body.password : '';
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
-  if (!password) return NextResponse.json({ error: 'Password required' }, { status: 400 });
+  if (!email || !password) return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
 
   try {
     await incrementRateLimit({ voterHash: `admin:${clientIp(req)}`, action: 'admin-login', max: 10, windowMs: 15 * 60 * 1000 });
@@ -25,12 +25,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   }
 
-  if (!verifyPassword(password)) {
-    return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
+  const sb = await supabaseServer();
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
-  const { token, expiresAt } = await createAdminSession();
-  await logActivity('admin.login', 'admin', '', '');
-  const res = NextResponse.json({ success: true });
-  setAdminCookie(res, token, expiresAt);
-  return res;
+  // Verify the signed-in user is actually an administrator before keeping the session.
+  const { data: { user } } = await sb.auth.getUser();
+  const { isAdminUser } = await import('@/lib/admin');
+  if (!user || !isAdminUser(user)) {
+    await sb.auth.signOut();
+    return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  }
+  await logActivity('admin.login', 'admin', user.id, '');
+  return NextResponse.json({ success: true });
 }

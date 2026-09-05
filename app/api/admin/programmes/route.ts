@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { logActivity, requireAdmin } from '@/lib/admin';
-import { queryD1 } from '@/lib/d1';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getAllFileCounts } from '@/lib/r2';
 import { getSubjectsForProgramme } from '@/lib/subjects';
 
@@ -9,18 +9,19 @@ function slugify(title: string): string {
   return title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'programme';
 }
 
+type ProgrammeRow = { id: string; code: string; title: string; description: string; is_hidden: boolean; position: number };
+
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   try {
-    let rows: Record<string, unknown>[] = [];
-    try {
-      const res = await queryD1(`SELECT id, code, title, description, is_hidden, position FROM programmes ORDER BY position ASC, id ASC`);
-      rows = res.results;
-    } catch {
-      const res = await queryD1(`SELECT id, code, title, description FROM programmes ORDER BY id ASC`);
-      rows = res.results.map((r) => ({ ...r, is_hidden: 0, position: 0 }));
-    }
+    const { data, error } = await supabaseAdmin()
+      .from('programmes')
+      .select('id, code, title, description, is_hidden, position')
+      .order('position', { ascending: true })
+      .order('id', { ascending: true });
+    if (error) throw error;
+    const rows = (data ?? []) as ProgrammeRow[];
     const fileCounts = await getAllFileCounts().catch(() => ({} as Record<string, number>));
     const out = [];
     for (const r of rows) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
       const files = subs.reduce((a, s) => a + (fileCounts[s.id] || 0), 0);
       out.push({
         id, code: String(r.code ?? ''), title: String(r.title ?? ''), description: String(r.description ?? ''),
-        hidden: Number(r.is_hidden ?? 0) === 1, position: Number(r.position ?? 0),
+        hidden: Boolean(r.is_hidden), position: Number(r.position ?? 0),
         subjectCount: subs.length, fileCount: files,
       });
     }
@@ -55,10 +56,11 @@ export async function POST(req: NextRequest) {
   if (!title || !code) return NextResponse.json({ error: 'Title and code required' }, { status: 400 });
   const id = `${slugify(title)}-${Date.now().toString(36)}`;
   try {
-    await queryD1(`INSERT INTO programmes (id, code, title, description) VALUES (?, ?, ?, ?)`, [id, code, title, description]);
-    try {
-      await queryD1(`UPDATE programmes SET position = (SELECT COALESCE(MAX(position),0)+1 FROM programmes) WHERE id = ?`, [id]);
-    } catch { /* pre-migration */ }
+    const sb = supabaseAdmin();
+    const { data: maxRow } = await sb.from('programmes').select('position').order('position', { ascending: false }).limit(1).maybeSingle();
+    const nextPos = Number((maxRow as { position: number } | null)?.position ?? 0) + 1;
+    const { error } = await sb.from('programmes').insert({ id, code, title, description, position: nextPos });
+    if (error) throw error;
     await logActivity('programme.created', 'programme', id, `${code} ${title}`);
     revalidateTag('programmes', 'max');
     revalidateTag('courses', 'max');
@@ -80,35 +82,38 @@ export async function PATCH(req: NextRequest) {
   if (Array.isArray(payload.reorder)) {
     const ids = (payload.reorder as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 50);
     try {
+      const sb = supabaseAdmin();
       for (let i = 0; i < ids.length; i += 1) {
-        await queryD1(`UPDATE programmes SET position = ? WHERE id = ?`, [i, ids[i].slice(0, 100)]);
+        const { error } = await sb.from('programmes').update({ position: i }).eq('id', ids[i].slice(0, 100));
+        if (error) throw error;
       }
       await logActivity('programme.reordered', 'programme', '', ids.join(','));
       revalidateTag('programmes', 'max');
       return NextResponse.json({ success: true });
     } catch {
-      return NextResponse.json({ error: 'Reorder not supported yet (run migration 0007)' }, { status: 400 });
+      return NextResponse.json({ error: 'Reorder failed' }, { status: 400 });
     }
   }
   if (typeof payload.id !== 'string' || !payload.id || payload.id.length > 100) {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   }
   try {
+    const sb = supabaseAdmin();
     if (typeof payload.hidden === 'boolean') {
-      await queryD1(`UPDATE programmes SET is_hidden = ? WHERE id = ?`, [payload.hidden ? 1 : 0, payload.id]);
+      const { error } = await sb.from('programmes').update({ is_hidden: payload.hidden }).eq('id', payload.id);
+      if (error) throw error;
       await logActivity(payload.hidden ? 'programme.hidden' : 'programme.unhidden', 'programme', payload.id, '');
       revalidateTag('programmes', 'max');
       return NextResponse.json({ success: true });
     }
-    const sets: string[] = [];
-    const params: (string | number)[] = [];
-    if (typeof payload.title === 'string' && payload.title.trim()) { sets.push('title = ?'); params.push(payload.title.trim().slice(0, 120)); }
-    if (typeof payload.code === 'string' && payload.code.trim()) { sets.push('code = ?'); params.push(payload.code.trim().toUpperCase().slice(0, 60)); }
-    if (typeof payload.description === 'string') { sets.push('description = ?'); params.push(payload.description.trim().slice(0, 500)); }
-    if (typeof payload.position === 'number') { sets.push('position = ?'); params.push(Math.floor(payload.position)); }
-    if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
-    params.push(payload.id);
-    await queryD1(`UPDATE programmes SET ${sets.join(', ')} WHERE id = ?`, params);
+    const patch: { title?: string; code?: string; description?: string; position?: number } = {};
+    if (typeof payload.title === 'string' && payload.title.trim()) patch.title = payload.title.trim().slice(0, 120);
+    if (typeof payload.code === 'string' && payload.code.trim()) patch.code = payload.code.trim().toUpperCase().slice(0, 60);
+    if (typeof payload.description === 'string') patch.description = payload.description.trim().slice(0, 500);
+    if (typeof payload.position === 'number') patch.position = Math.floor(payload.position);
+    if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    const { error } = await sb.from('programmes').update(patch).eq('id', payload.id);
+    if (error) throw error;
     await logActivity('programme.edited', 'programme', payload.id, '');
     revalidateTag('programmes', 'max');
     revalidateTag('courses', 'max');
@@ -129,7 +134,8 @@ export async function DELETE(req: NextRequest) {
     if (subs.length > 0 && !force) {
       return NextResponse.json({ error: `Programme has ${subs.length} subject(s). Confirm destructive delete.`, needsConfirm: true, subjectCount: subs.length }, { status: 409 });
     }
-    await queryD1(`DELETE FROM programmes WHERE id = ?`, [id]);
+    const { error } = await supabaseAdmin().from('programmes').delete().eq('id', id);
+    if (error) throw error;
     await logActivity('programme.deleted', 'programme', id, `subjects:${subs.length}`);
     revalidateTag('programmes', 'max');
     revalidateTag('courses', 'max');

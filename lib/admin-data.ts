@@ -1,15 +1,19 @@
 import { randomBytes } from 'node:crypto';
-import { queryD1 } from '@/lib/d1';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export type AdminNote = { id: string; entityType: string; entityId: string; body: string; createdAt: string; updatedAt: string };
 
 export async function listAdminNotes(entityType: string, entityId: string): Promise<AdminNote[]> {
   try {
-    const res = await queryD1(
-      `SELECT id, entity_type, entity_id, body, created_at, updated_at FROM admin_notes WHERE entity_type = ? AND entity_id = ? ORDER BY created_at DESC LIMIT 20`,
-      [entityType, entityId],
-    );
-    return res.results.map((r) => ({
+    const { data, error } = await supabaseAdmin()
+      .from('admin_notes')
+      .select('id, entity_type, entity_id, body, created_at, updated_at')
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    return ((data ?? []) as { id: string; entity_type: string; entity_id: string; body: string; created_at: string; updated_at: string }[]).map((r) => ({
       id: String(r.id ?? ''),
       entityType: String(r.entity_type ?? ''),
       entityId: String(r.entity_id ?? ''),
@@ -28,12 +32,22 @@ export async function upsertAdminNote(entityType: string, entityId: string, body
   if (!entityType || !entityId) throw new Error('Missing target');
   const id = `note-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
   try {
-    await queryD1(
-      `INSERT INTO admin_notes (id, entity_type, entity_id, body, updated_at) VALUES (?, ?, ?, ?, datetime('now'))`,
-      [id, entityType.slice(0, 40), entityId.slice(0, 200), clean],
-    );
-    const res = await queryD1(`SELECT id, entity_type, entity_id, body, created_at, updated_at FROM admin_notes WHERE id = ? LIMIT 1`, [id]);
-    const r = res.results[0];
+    const { error } = await supabaseAdmin().from('admin_notes').insert({
+      id,
+      entity_type: entityType.slice(0, 40),
+      entity_id: entityId.slice(0, 200),
+      body: clean,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+    const { data, error: selErr } = await supabaseAdmin()
+      .from('admin_notes')
+      .select('id, entity_type, entity_id, body, created_at, updated_at')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    const r = data as { id: string; entity_type: string; entity_id: string; body: string; created_at: string; updated_at: string } | null;
     if (!r) return null;
     return {
       id: String(r.id ?? ''), entityType: String(r.entity_type ?? ''), entityId: String(r.entity_id ?? ''),
@@ -45,33 +59,49 @@ export async function upsertAdminNote(entityType: string, entityId: string, body
 }
 
 export async function deleteAdminNote(id: string) {
-  await queryD1(`DELETE FROM admin_notes WHERE id = ?`, [id]);
+  const { error } = await supabaseAdmin().from('admin_notes').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function isPinned(entityType: string, entityId: string): Promise<boolean> {
   try {
-    const res = await queryD1(`SELECT entity_id FROM pins WHERE entity_type = ? AND entity_id = ? LIMIT 1`, [entityType, entityId]);
-    return res.results.length > 0;
+    const { data, error } = await supabaseAdmin()
+      .from('pins')
+      .select('entity_id')
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .limit(1);
+    if (error) throw error;
+    return (data ?? []).length > 0;
   } catch {
     return false;
   }
 }
 
 export async function setPinned(entityType: string, entityId: string, pinned: boolean) {
+  const sb = supabaseAdmin();
   if (pinned) {
-    await queryD1(
-      `INSERT INTO pins (entity_type, entity_id, position) VALUES (?, ?, ?) ON CONFLICT(entity_type, entity_id) DO NOTHING`,
-      [entityType.slice(0, 40), entityId.slice(0, 200), Date.now()],
+    const { error } = await sb.from('pins').upsert(
+      { entity_type: entityType.slice(0, 40), entity_id: entityId.slice(0, 200), position: Date.now() },
+      { onConflict: 'entity_type,entity_id', ignoreDuplicates: true },
     );
+    if (error) throw error;
   } else {
-    await queryD1(`DELETE FROM pins WHERE entity_type = ? AND entity_id = ?`, [entityType, entityId]);
+    const { error } = await sb.from('pins').delete().eq('entity_type', entityType).eq('entity_id', entityId);
+    if (error) throw error;
   }
 }
 
 export async function listPins(entityType: string): Promise<string[]> {
   try {
-    const res = await queryD1(`SELECT entity_id FROM pins WHERE entity_type = ? ORDER BY position DESC LIMIT 100`, [entityType]);
-    return res.results.map((r) => String(r.entity_id ?? ''));
+    const { data, error } = await supabaseAdmin()
+      .from('pins')
+      .select('entity_id')
+      .eq('entity_type', entityType)
+      .order('position', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    return ((data ?? []) as { entity_id: string }[]).map((r) => String(r.entity_id ?? ''));
   } catch {
     return [];
   }
@@ -80,10 +110,14 @@ export async function listPins(entityType: string): Promise<string[]> {
 export async function recordStatusChange(feedbackId: string, oldStatus: string, newStatus: string, reason = '') {
   const id = `sh-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
   try {
-    await queryD1(
-      `INSERT INTO status_history (id, feedback_id, old_status, new_status, reason) VALUES (?, ?, ?, ?, ?)`,
-      [id, feedbackId.slice(0, 200), oldStatus.slice(0, 40), newStatus.slice(0, 40), reason.slice(0, 500)],
-    );
+    const { error } = await supabaseAdmin().from('status_history').insert({
+      id,
+      feedback_id: feedbackId.slice(0, 200),
+      old_status: oldStatus.slice(0, 40),
+      new_status: newStatus.slice(0, 40),
+      reason: reason.slice(0, 500),
+    });
+    if (error) throw error;
   } catch {
     // ignore
   }

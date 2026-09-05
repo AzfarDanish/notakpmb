@@ -1,140 +1,6 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { queryD1 } from '@/lib/d1';
-
-export const ADMIN_COOKIE = 'notakpmb_admin';
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-
-function getSecret(): string | null {
-  return process.env.ADMIN_SESSION_SECRET ?? process.env.FEEDBACK_COOKIE_SALT ?? process.env.D1_DATABASE_ID ?? null;
-}
-
-function signToken(token: string): string {
-  const secret = getSecret() ?? 'notakpmb-admin-dev';
-  return createHash('sha256').update(`${secret}:${token}`).digest('hex');
-}
-
-export function verifyPassword(input: string): boolean {
-  const hash = process.env.ADMIN_PASSWORD_HASH;
-  const plain = process.env.ADMIN_PASSWORD;
-  if (hash && hash.includes(':')) {
-    try {
-      const [salt, expected] = hash.split(':');
-      const derived = scryptSync(input, salt, 64).toString('hex');
-      const a = Buffer.from(derived, 'hex');
-      const b = Buffer.from(expected, 'hex');
-      if (a.length !== b.length) return false;
-      return timingSafeEqual(a, b);
-    } catch {
-      return false;
-    }
-  }
-  if (plain) {
-    const a = Buffer.from(input);
-    const b = Buffer.from(plain);
-    if (a.length !== b.length) return false;
-    try {
-      return timingSafeEqual(a, b);
-    } catch {
-      return false;
-    }
-  }
-  return false;
-}
-
-export function isAdminConfigured(): boolean {
-  return Boolean(process.env.ADMIN_PASSWORD_HASH || process.env.ADMIN_PASSWORD);
-}
-
-export async function createAdminSession(): Promise<{ token: string; expiresAt: number }> {
-  const token = randomBytes(32).toString('hex');
-  const expiresAt = Date.now() + SESSION_TTL_MS;
-  await queryD1(
-    `INSERT INTO admin_sessions (token, expires_at) VALUES (?, ?)`,
-    [token, expiresAt],
-  ).catch(() => {
-    // Table may not exist yet (pre-migration); session still works via signed cookie fallback below.
-  });
-  return { token, expiresAt };
-}
-
-export function setAdminCookie(res: NextResponse, token: string, expiresAt: number) {
-  const sig = signToken(token);
-  res.cookies.set(ADMIN_COOKIE, `${token}.${sig}`, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: Math.max(1, Math.floor((expiresAt - Date.now()) / 1000)),
-  });
-}
-
-export function clearAdminCookie(res: NextResponse) {
-  res.cookies.set(ADMIN_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 });
-}
-
-function parseAdminCookie(req: NextRequest): string | null {
-  const raw = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!raw || !raw.includes('.')) return null;
-  const [token, sig] = raw.split('.');
-  if (!token || !sig) return null;
-  const expected = signToken(token);
-  try {
-    const a = Buffer.from(sig, 'hex');
-    const b = Buffer.from(expected, 'hex');
-    if (a.length !== b.length) return null;
-    if (!timingSafeEqual(a, b)) return null;
-  } catch {
-    return null;
-  }
-  return token;
-}
-
-export async function isAdminRequest(req: NextRequest): Promise<boolean> {
-  const token = parseAdminCookie(req);
-  if (!token) return false;
-  try {
-    const res = await queryD1(`SELECT expires_at FROM admin_sessions WHERE token = ? LIMIT 1`, [token]);
-    const row = res.results[0];
-    if (!row) {
-      // Pre-migration fallback: valid signature is enough (single-owner, short TTL still enforced by cookie maxAge).
-      return true;
-    }
-    return Number(row.expires_at ?? 0) > Date.now();
-  } catch {
-    // If D1 unavailable, fall back to signature check so configured admin can still log in locally.
-    return true;
-  }
-}
-
-export async function requireAdmin(req: NextRequest): Promise<NextResponse | null> {
-  if (!(await isAdminRequest(req))) {
-    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
-  }
-  return null;
-}
-
-export async function destroyAdminSession(req: NextRequest) {
-  const token = parseAdminCookie(req);
-  if (!token) return;
-  try {
-    await queryD1(`DELETE FROM admin_sessions WHERE token = ?`, [token]);
-  } catch {
-    // ignore
-  }
-}
-
-export async function logActivity(action: string, entityType: string, entityId = '', meta = '') {
-  const id = `act-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
-  try {
-    await queryD1(
-      `INSERT INTO activity_log (id, action, entity_type, entity_id, meta) VALUES (?, ?, ?, ?, ?)`,
-      [id, action.slice(0, 80), entityType.slice(0, 40), String(entityId).slice(0, 200), String(meta).slice(0, 2000)],
-    );
-  } catch {
-    // activity table may not exist pre-migration; never break the primary mutation.
-  }
-}
+import { supabaseAdmin, supabaseServer } from '@/lib/supabase';
 
 export type ActivityItem = {
   id: string
@@ -145,30 +11,46 @@ export type ActivityItem = {
   createdAt: string
 };
 
+/** True when the request cookies carry a valid Supabase Auth admin session. */
+export async function isAdminRequest(req: NextRequest): Promise<boolean> {
+  // The session is read from cookies via supabaseServer(); `req` is kept so
+  // every Route Handler calls requireAdmin(req) uniformly.
+  void req;
+  try {
+    const sb = await supabaseServer();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return false;
+    return isAdminUser(user);
+  } catch {
+    return false;
+  }
+}
+
+export function isAdminUser(user: { app_metadata?: Record<string, unknown>; email?: string | null }): boolean {
+  const meta = (user.app_metadata ?? {}) as Record<string, unknown>;
+  if (meta.admin === true || meta.role === 'admin' || meta.app_role === 'admin') return true;
+  const allow = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (allow.length > 0 && user.email && allow.includes(user.email.toLowerCase())) return true;
+  return false;
+}
+
+export async function requireAdmin(req: NextRequest): Promise<NextResponse | null> {
+  if (!(await isAdminRequest(req))) {
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  }
+  return null;
+}
+
+/** Server-Component guard (uses request cookies via supabaseServer). */
 export async function getAdminFromCookies(): Promise<boolean> {
   try {
-    const { cookies } = await import('next/headers');
-    const store = await cookies();
-    const raw = store.get(ADMIN_COOKIE)?.value;
-    if (!raw || !raw.includes('.')) return false;
-    const [token, sig] = raw.split('.');
-    if (!token || !sig) return false;
-    const expected = signToken(token);
-    try {
-      const a = Buffer.from(sig, 'hex');
-      const b = Buffer.from(expected, 'hex');
-      if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
-    } catch {
-      return false;
-    }
-    try {
-      const res = await queryD1(`SELECT expires_at FROM admin_sessions WHERE token = ? LIMIT 1`, [token]);
-      const row = res.results[0];
-      if (!row) return true; // pre-migration fallback
-      return Number(row.expires_at ?? 0) > Date.now();
-    } catch {
-      return true;
-    }
+    const sb = await supabaseServer();
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return false;
+    return isAdminUser(user);
   } catch {
     return false;
   }
@@ -176,11 +58,13 @@ export async function getAdminFromCookies(): Promise<boolean> {
 
 export async function listActivity(limit = 50): Promise<ActivityItem[]> {
   try {
-    const res = await queryD1(
-      `SELECT id, action, entity_type, entity_id, meta, created_at FROM activity_log ORDER BY created_at DESC LIMIT ?`,
-      [Math.min(Math.max(limit, 1), 100)],
-    );
-    return res.results.map((r) => ({
+    const { data, error } = await supabaseAdmin()
+      .from('activity_log')
+      .select('id, action, entity_type, entity_id, meta, created_at')
+      .order('created_at', { ascending: false })
+      .limit(Math.min(Math.max(limit, 1), 100));
+    if (error) throw error;
+    return ((data ?? []) as { id: string; action: string; entity_type: string; entity_id: string; meta: string; created_at: string }[]).map((r) => ({
       id: String(r.id ?? ''),
       action: String(r.action ?? ''),
       entityType: String(r.entity_type ?? ''),
@@ -190,5 +74,21 @@ export async function listActivity(limit = 50): Promise<ActivityItem[]> {
     }));
   } catch {
     return [];
+  }
+}
+
+export async function logActivity(action: string, entityType: string, entityId = '', meta = '') {
+  const id = `act-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
+  try {
+    const { error } = await supabaseAdmin().from('activity_log').insert({
+      id,
+      action: action.slice(0, 80),
+      entity_type: entityType.slice(0, 40),
+      entity_id: String(entityId).slice(0, 200),
+      meta: String(meta).slice(0, 2000),
+    });
+    if (error) throw error;
+  } catch {
+    // Activity logging must never break the primary mutation.
   }
 }

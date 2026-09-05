@@ -3,7 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getR2Client } from '@/lib/r2';
 import { logActivity, requireAdmin } from '@/lib/admin';
-import { queryD1 } from '@/lib/d1';
+import { supabaseAdmin } from '@/lib/supabase';
 
 const MAX_LIST = 100;
 
@@ -101,7 +101,7 @@ export async function PATCH(req: NextRequest) {
       ContentType: contentType, MetadataDirective: 'REPLACE',
       Metadata: { title: encodeURIComponent(title), originalname: originalName },
     }));
-    await queryD1(`INSERT INTO files (key, subject_id, title) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET title = excluded.title`, [key, key.split('/')[0] ?? '', title]).catch(() => undefined);
+    await supabaseAdmin().from('files').upsert({ key, subject_id: key.split('/')[0] ?? '', title }, { onConflict: 'key' }).then(() => undefined, () => undefined);
     await logActivity('file.metadata', 'file', key, title);
     revalidateTag('r2-files', 'max');
     return NextResponse.json({ success: true });
@@ -121,7 +121,7 @@ export async function DELETE(req: NextRequest) {
   if (!client || !bucket) return NextResponse.json({ error: 'R2 not configured' }, { status: 500 });
   try {
     await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
-    await queryD1(`INSERT INTO files (key, subject_id, deleted_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET deleted_at = datetime('now')`, [key, key.split('/')[0] ?? '']).catch(() => undefined);
+    await supabaseAdmin().from('files').upsert({ key, subject_id: key.split('/')[0] ?? '', deleted_at: new Date().toISOString() }, { onConflict: 'key' }).then(() => undefined, () => undefined);
     await logActivity('file.deleted', 'file', key, '');
     revalidateTag('r2-files', 'max');
     return NextResponse.json({ success: true });

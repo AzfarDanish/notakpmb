@@ -3,7 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { logActivity, requireAdmin } from '@/lib/admin';
 import { deleteFeedback, normalizeFeedbackSort, normalizeFeedbackStatus, normalizeStatusFilter, searchFeedbackAdmin, updateFeedbackStatus } from '@/lib/feedback';
 import { recordStatusChange } from '@/lib/admin-data';
-import { queryD1 } from '@/lib/d1';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req);
@@ -39,8 +39,8 @@ export async function PATCH(req: NextRequest) {
   }
   const reason = typeof payload.reason === 'string' ? payload.reason.slice(0, 500) : '';
   try {
-    const before = await queryD1(`SELECT status FROM feedback_items WHERE id = ? LIMIT 1`, [payload.id]);
-    const oldStatus = String(before.results[0]?.status ?? '');
+    const { data: before } = await supabaseAdmin().from('feedback_items').select('status').eq('id', payload.id).limit(1).maybeSingle();
+    const oldStatus = String((before as { status: string } | null)?.status ?? '');
     const item = await updateFeedbackStatus(payload.id, status);
     await recordStatusChange(payload.id, oldStatus, status, reason);
     await logActivity(status === 'archived' ? 'feedback.archived' : 'feedback.status', 'feedback', payload.id, `${oldStatus} -> ${status}${reason ? ` (${reason})` : ''}`);

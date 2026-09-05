@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { clearAdminCookie, destroyAdminSession } from '@/lib/admin';
+import { NextResponse } from 'next/server';
+import { supabaseServer } from '@/lib/supabase';
 
-export async function POST(req: NextRequest) {
-  await destroyAdminSession(req);
-  const res = NextResponse.json({ success: true });
-  clearAdminCookie(res);
-  return res;
+export async function POST() {
+  const sb = await supabaseServer();
+  await sb.auth.signOut();
+  return NextResponse.json({ success: true });
 }

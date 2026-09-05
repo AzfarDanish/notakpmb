@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
-import { isD1Configured } from '@/lib/d1';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { incrementRateLimit, voteFeedback } from '@/lib/feedback';
 import { ensureFeedbackIdentity, setFeedbackIdentityCookie } from '../../identity';
 
@@ -8,8 +8,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!isD1Configured()) {
-    return NextResponse.json({ error: 'D1 not configured' }, { status: 503 });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
   const { id } = await params;

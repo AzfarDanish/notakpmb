@@ -5,7 +5,17 @@ import {
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { getR2Client } from '@/lib/r2';
-import { d1Or, queryD1 } from '@/lib/d1';
+import { dbOr, supabaseAdmin } from '@/lib/supabase';
+
+async function markFilesDeleted(subjectId: string) {
+  // Best-effort file-index cleanup (R2 remains source of truth).
+  try {
+    const { error } = await supabaseAdmin().from('files').delete().eq('subject_id', subjectId);
+    if (error) throw error;
+  } catch {
+    // index cleanup must never break subject deletion
+  }
+}
 import {
   getProgramme as getStaticProgramme,
   getProgrammes as getStaticProgrammes,
@@ -42,10 +52,11 @@ function kindId(kind: SubjectKind, subjectId: string): string {
 }
 
 async function readSubjectRows(): Promise<SubjectRow[]> {
-  const res = await queryD1(
-    'SELECT id, subject_id, kind, title, code, programme_id FROM subjects',
-  );
-  return res.results.map((r) => ({
+  const { data, error } = await supabaseAdmin()
+    .from('subjects')
+    .select('subject_id, kind, title, code, programme_id');
+  if (error) throw error;
+  return ((data ?? []) as { subject_id: string; kind: string; title: string | null; code: string | null; programme_id: string | null }[]).map((r) => ({
     subjectId: String(r.subject_id ?? ''),
     kind: String(r.kind) as SubjectKind,
     title: r.title === null || r.title === undefined ? null : String(r.title),
@@ -128,8 +139,9 @@ async function loadDeltas() {
 
 async function getHiddenProgrammeIds(): Promise<Set<string>> {
   try {
-    const res = await queryD1(`SELECT id FROM programmes WHERE is_hidden = 1`);
-    return new Set(res.results.map((r) => String(r.id ?? '')));
+    const { data, error } = await supabaseAdmin().from('programmes').select('id').eq('is_hidden', true);
+    if (error) throw error;
+    return new Set(((data ?? []) as { id: string }[]).map((r) => String(r.id ?? '')));
   } catch {
     return new Set();
   }
@@ -137,7 +149,7 @@ async function getHiddenProgrammeIds(): Promise<Set<string>> {
 
 export const getProgrammes = cache(async (): Promise<Programme[]> => {
   const fallback = getStaticProgrammes().map((p) => ({ ...p, subjects: [] }));
-  return d1Or(async () => {
+  return dbOr(async () => {
     const [cloudProgrammes, deltaRows, hidden] = await Promise.all([
       getCloudProgrammesWithCourses(),
       loadDeltas(),
@@ -149,7 +161,7 @@ export const getProgrammes = cache(async (): Promise<Programme[]> => {
 
 export const getProgramme = cache(async (id: string): Promise<Programme | undefined> => {
   const fallback = getStaticProgramme(id);
-  return d1Or(async () => {
+  return dbOr(async () => {
     const [cloudProgrammes, deltaRows, hidden] = await Promise.all([
       getCloudProgrammesWithCourses(),
       loadDeltas(),
@@ -168,7 +180,7 @@ export const getSubjectsForProgramme = cache(async (
   // START EMPTY: programme subjects come only from ledger (custom adds via UI), not from catalog.
   // Catalog (courses) is pick-list for the picker, not auto-enrolled.
   const fallback: Subject[] = [];
-  return d1Or(async () => {
+  return dbOr(async () => {
     const deltaRows = await loadDeltas();
     const base: Programme = {
       id: programmeId,
@@ -185,7 +197,7 @@ export const getSubjectWithCustom = cache(async (
   id: string,
 ): Promise<SubjectContext | undefined> => {
   const fallback = getStaticSubject(id);
-  return d1Or(async () => {
+  return dbOr(async () => {
     const [deltaRows, cloudCtx] = await Promise.all([
       loadDeltas(),
       getCloudCourse(id),
@@ -238,10 +250,13 @@ export async function addSubject(input: {
     programmeId: input.programmeId,
   };
 
-  const exists = await queryD1('SELECT id FROM programmes WHERE id = ?', [
-    input.programmeId,
-  ]);
-  if (exists.results.length === 0) throw new Error('Unknown programme');
+  const { data: progExists, error: progErr } = await supabaseAdmin()
+    .from('programmes')
+    .select('id')
+    .eq('id', input.programmeId)
+    .limit(1);
+  if (progErr) throw progErr;
+  if (!progExists || progExists.length === 0) throw new Error('Unknown programme');
 
   // Duplicate guard: prevent same code or id already in cloud catalog or custom ledger for this programme
   const existing = await getSubjectsForProgramme(input.programmeId);
@@ -250,11 +265,11 @@ export async function addSubject(input: {
   );
   if (dup) throw new Error('Subject already exists');
 
-  await queryD1(
-    `INSERT INTO subjects (id, subject_id, kind, title, code, programme_id)
-     VALUES (?, ?, 'custom', ?, ?, ?)`,
-    [subject.id, subject.id, subject.title, subject.code, subject.programmeId],
-  );
+  const { error: insErr } = await supabaseAdmin().from('subjects').insert({
+    id: subject.id, subject_id: subject.id, kind: 'custom',
+    title: subject.title, code: subject.code, programme_id: subject.programmeId,
+  });
+  if (insErr) throw insErr;
   return subject;
 }
 
@@ -273,10 +288,12 @@ export async function renameSubject(input: {
 
   const custom = customSubjects.find((s) => s.id === input.id);
   if (custom) {
-    await queryD1(
-      `UPDATE subjects SET title = ?, code = ? WHERE id = ? AND kind = 'custom'`,
-      [title, code, input.id],
-    );
+    const { error } = await supabaseAdmin()
+      .from('subjects')
+      .update({ title, code })
+      .eq('id', input.id)
+      .eq('kind', 'custom');
+    if (error) throw error;
     return { id: input.id, title, code };
   }
 
@@ -284,12 +301,11 @@ export async function renameSubject(input: {
   const staticContext = getStaticSubject(input.id);
   if (!staticContext) throw new Error('Subject not found');
 
-  await queryD1(
-    `INSERT INTO subjects (id, subject_id, kind, title, code)
-     VALUES (?, ?, 'rename', ?, ?)
-     ON CONFLICT(id) DO UPDATE SET title = excluded.title, code = excluded.code`,
-    [kindId('rename', input.id), input.id, title, code],
+  const { error } = await supabaseAdmin().from('subjects').upsert(
+    { id: kindId('rename', input.id), subject_id: input.id, kind: 'rename', title, code },
+    { onConflict: 'id' },
   );
+  if (error) throw error;
   return { id: input.id, title, code };
 }
 
@@ -305,17 +321,19 @@ export async function deleteSubject(id: string): Promise<{ deletedFiles: number 
   const isStatic = Boolean(getStaticSubject(id));
 
   if (isCustom) {
-    await queryD1(`DELETE FROM subjects WHERE id = ? AND kind = 'custom'`, [id]);
+    const { error } = await supabaseAdmin().from('subjects').delete().eq('id', id).eq('kind', 'custom');
+    if (error) throw error;
   } else if (isStatic && !deletedIds.has(id)) {
-    await queryD1(
-      `INSERT INTO subjects (id, subject_id, kind)
-       VALUES (?, ?, 'deletion')
-       ON CONFLICT(id) DO NOTHING`,
-      [kindId('deletion', id), id],
+    const { error } = await supabaseAdmin().from('subjects').upsert(
+      { id: kindId('deletion', id), subject_id: id, kind: 'deletion' },
+      { onConflict: 'id', ignoreDuplicates: true },
     );
+    if (error) throw error;
   } else {
     throw new Error('Subject not found');
   }
+
+  await markFilesDeleted(id);
 
   let deletedFiles = 0;
   const { Contents } = await client.send(
@@ -349,7 +367,7 @@ export const searchArchiveWithCustom = cache(async (query: string): Promise<{
   const q = query.trim().toLowerCase();
   if (!q) return { programmes: [], subjects: [] };
 
-  return d1Or(async () => {
+  return dbOr(async () => {
     const [deltaRows, cloudSubjects, cloudProgrammes] = await Promise.all([
       loadDeltas(),
       searchCloudCourses(query, 20),

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { isR2Configured } from '@/lib/r2';
-import { isD1Configured } from '@/lib/d1';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { addSubject, deleteSubject, renameSubject } from '@/lib/subjects';
 
 export async function POST(request: NextRequest) {
-  if (!isD1Configured()) {
-    return NextResponse.json({ error: 'D1 not configured' }, { status: 503 });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
   let body: unknown;
@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!isD1Configured()) {
-    return NextResponse.json({ error: 'D1 not configured' }, { status: 503 });
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
   const id = request.nextUrl.searchParams.get('id');
@@ -94,9 +94,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  if (!isD1Configured() || !isR2Configured()) {
+  if (!isSupabaseConfigured() || !isR2Configured()) {
     return NextResponse.json(
-      { error: 'D1 and R2 must be configured' },
+      { error: 'Database and storage must be configured' },
       { status: 503 },
     );
   }

@@ -1,4 +1,4 @@
-import { d1Or, queryD1 } from '@/lib/d1'
+import { dbOr, supabaseAdmin } from '@/lib/supabase'
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import {
@@ -13,10 +13,17 @@ export type Course = Subject & { programmeId: string }
 
 const D1_CACHE_SECONDS = 60
 
+type CourseRow = { id: string; code: string; title: string; programme_id: string }
+type ProgrammeRow = { id: string; code: string; title: string; description: string }
+
 async function readAllCourses(): Promise<Course[]> {
-  return d1Or(async () => {
-    const res = await queryD1('SELECT id, code, title, programme_id FROM courses ORDER BY title ASC')
-    return res.results.map((r) => ({
+  return dbOr(async () => {
+    const { data, error } = await supabaseAdmin()
+      .from('courses')
+      .select('id, code, title, programme_id')
+      .order('title', { ascending: true });
+    if (error) throw error;
+    return (data as CourseRow[]).map((r) => ({
       id: String(r.id ?? ''),
       code: String(r.code ?? ''),
       title: String(r.title ?? ''),
@@ -40,20 +47,23 @@ export const getCoursesByProgramme = cache(async (programmeId: string): Promise<
 })
 
 async function readCourse(id: string): Promise<SubjectContext | undefined> {
-  return d1Or(async () => {
-    const res = await queryD1(
-      `SELECT c.id, c.code, c.title, c.programme_id, p.code as p_code, p.title as p_title, p.description as p_desc
-       FROM courses c LEFT JOIN programmes p ON p.id = c.programme_id WHERE c.id = ? LIMIT 1`,
-      [id],
-    )
-    if (res.results.length === 0) return undefined
-    const r = res.results[0]
+  return dbOr(async () => {
+    const { data, error } = await supabaseAdmin()
+      .from('courses')
+      .select('id, code, title, programme_id, programmes!courses_programme_id_fkey(id, code, title, description)')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return undefined
+    const r = data as unknown as CourseRow & { programmes: ProgrammeRow | ProgrammeRow[] | null };
+    const prog = Array.isArray(r.programmes) ? r.programmes[0] : r.programmes;
     const programmeId = String(r.programme_id ?? 'dcs')
     const programme: Programme = {
       id: programmeId,
-      code: String(r.p_code ?? getStaticProgramme(programmeId)?.code ?? ''),
-      title: String(r.p_title ?? getStaticProgramme(programmeId)?.title ?? ''),
-      description: String(r.p_desc ?? getStaticProgramme(programmeId)?.description ?? ''),
+      code: String(prog?.code ?? getStaticProgramme(programmeId)?.code ?? ''),
+      title: String(prog?.title ?? getStaticProgramme(programmeId)?.title ?? ''),
+      description: String(prog?.description ?? getStaticProgramme(programmeId)?.description ?? ''),
       subjects: [],
     }
     return {
@@ -73,35 +83,35 @@ export const getCourse = cache(
 export const searchCourses = cache(async (query: string, limit = 10, programmeId?: string): Promise<SubjectContext[]> => {
   const q = query.trim()
   if (!q) return []
-  const like = `%${q.toLowerCase()}%`
   const capped = Math.min(Math.max(limit, 1), 20)
-  return d1Or(async () => {
-    const filterProgramme = programmeId ? ` AND c.programme_id = ?` : ''
-    const params: (string | number | null)[] = programmeId
-      ? [like, like, programmeId, q, q, `${q.toLowerCase()}%`, capped]
-      : [like, like, q, q, `${q.toLowerCase()}%`, capped]
-    const res = await queryD1(
-      `SELECT c.id, c.code, c.title, c.programme_id, p.code as p_code, p.title as p_title, p.description as p_desc
-       FROM courses c LEFT JOIN programmes p ON p.id = c.programme_id
-       WHERE (lower(c.title) LIKE ? OR lower(c.code) LIKE ?)${filterProgramme}
-       ORDER BY
-          CASE WHEN lower(c.code) = lower(?) THEN 0
-               WHEN lower(c.title) = lower(?) THEN 1
-               WHEN lower(c.code) LIKE lower(?) THEN 2
-               ELSE 3 END,
-          c.title ASC
-        LIMIT ?`,
-      params,
-    )
-    if (res.results.length === 0) return []
+  return dbOr(async () => {
+    let builder = supabaseAdmin()
+      .from('courses')
+      .select('id, code, title, programme_id, programmes!courses_programme_id_fkey(id, code, title, description)')
+      .or(`title.ilike.%${q}%,code.ilike.%${q}%`)
+      .limit(capped);
+    if (programmeId) builder = builder.eq('programme_id', programmeId);
+    const { data, error } = await builder;
+    if (error) throw error;
+    if (!data || data.length === 0) return []
+    const ql = q.toLowerCase();
+    const rows = (data as unknown as (CourseRow & { programmes: ProgrammeRow | ProgrammeRow[] | null })[]);
+    const rank = (r: CourseRow) => {
+      if (String(r.code ?? '').toLowerCase() === ql) return 0;
+      if (String(r.title ?? '').toLowerCase() === ql) return 1;
+      if (String(r.code ?? '').toLowerCase().startsWith(ql)) return 2;
+      return 3;
+    };
+    rows.sort((a, b) => rank(a) - rank(b) || String(a.title ?? '').localeCompare(String(b.title ?? '')));
     const results: SubjectContext[] = []
-    for (const r of res.results) {
+    for (const r of rows) {
       const pid = String(r.programme_id ?? 'dcs')
+      const prog = Array.isArray(r.programmes) ? r.programmes[0] : r.programmes;
       const programme: Programme = {
         id: pid,
-        code: String(r.p_code ?? getStaticProgramme(pid)?.code ?? pid),
-        title: String(r.p_title ?? getStaticProgramme(pid)?.title ?? ''),
-        description: String(r.p_desc ?? getStaticProgramme(pid)?.description ?? ''),
+        code: String(prog?.code ?? getStaticProgramme(pid)?.code ?? pid),
+        title: String(prog?.title ?? getStaticProgramme(pid)?.title ?? ''),
+        description: String(prog?.description ?? getStaticProgramme(pid)?.description ?? ''),
         subjects: [],
       }
       results.push({
@@ -116,9 +126,13 @@ export const searchCourses = cache(async (query: string, limit = 10, programmeId
 // Programmes start with 0 subjects; they only show subjects added via UI (ledger custom).
 async function readProgrammesWithCourses(): Promise<Programme[]> {
   const fallbackProgrammes = getStaticProgrammes()
-  return d1Or(async () => {
-    const progRes = await queryD1('SELECT id, code, title, description FROM programmes ORDER BY id')
-    const programmes: Programme[] = progRes.results.map((r) => ({
+  return dbOr(async () => {
+    const { data, error } = await supabaseAdmin()
+      .from('programmes')
+      .select('id, code, title, description')
+      .order('id', { ascending: true });
+    if (error) throw error;
+    const programmes: Programme[] = ((data ?? []) as ProgrammeRow[]).map((r) => ({
       id: String(r.id ?? ''),
       code: String(r.code ?? ''),
       title: String(r.title ?? ''),

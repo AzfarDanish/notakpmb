@@ -13,9 +13,10 @@ A digital archive of study materials (PDF, DOC, DOCX, TXT) for KPMB students, or
 
 ## Architecture
 
-- **Cloudflare R2** (via `@aws-sdk/client-s3`) stores files at `{subjectId}/{category}/{timestamp}-{filename}`, with `title` and `originalName` kept as object metadata.
-- **Cloudflare D1** (SQLite) is read through a small `fetch` wrapper (`lib/d1.ts`) and holds the programmes table plus a subject change ledger — rows typed `custom`, `rename`, or `deletion`. It stores only user changes.
-- **Base catalog in code** (`lib/data.ts`): the programmes are held in D1 and the base subject lists live in code, merged with the D1 ledger at read time (renames applied, deletions filtered, custom subjects appended). If D1 is unconfigured or unreachable, pages fall back to the static catalog.
+- **Cloudflare R2** (via `@aws-sdk/client-s3`) stores files at `{subjectId}/{category}/{timestamp}-{filename}`, with `title` and `originalName` kept as object metadata. File *content* always lives in R2.
+- **Supabase PostgreSQL** holds all metadata: the programmes table, the course catalog, a subject change ledger (rows typed `custom`, `rename`, `deletion`, `hidden`), feedback + votes + rate limits, and admin tables (activity, notes, pins, status history, file index).
+- **Supabase Auth** protects the private `/admin` area. The public archive stays anonymous.
+- **Base catalog in code** (`lib/data.ts`): the programmes live in Supabase and the base subject lists live in code, merged with the ledger at read time (renames applied, deletions/hides filtered, custom subjects appended). If Supabase is unconfigured or unreachable, pages fall back to the static catalog.
 
 ## Tech Stack
 
@@ -26,8 +27,9 @@ A digital archive of study materials (PDF, DOC, DOCX, TXT) for KPMB students, or
 | Language | TypeScript |
 | Motion / icons | `motion`, `lucide-react` |
 | Document previews | `mammoth`, `xlsx` |
-| Storage | Cloudflare R2 via `@aws-sdk/client-s3`; Cloudflare D1 via `fetch` |
-| Tooling | pnpm, ESLint, [Wrangler](https://developers.cloudflare.com/workers/wrangler/) |
+| Storage | Cloudflare R2 via `@aws-sdk/client-s3` (files); Supabase PostgreSQL via `@supabase/supabase-js` (metadata) |
+| Auth | Supabase Auth (admin only; public stays anonymous) |
+| Tooling | pnpm, ESLint |
 
 ## Getting started
 
@@ -42,30 +44,32 @@ pnpm start        # serve the build
 
 ## Configuration
 
-Copy `.env.example` to `.env.local` and fill in your Cloudflare credentials:
+Copy `.env.example` to `.env.local` and fill in your Supabase + Cloudflare credentials:
 
 | Variable | Purpose |
 | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (public) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key (public) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (**server-only, never expose**) |
+| `ADMIN_EMAILS` | Comma-separated owner emails allowed into `/admin` (fallback if no `app_metadata.admin` flag) |
 | `R2_ACCOUNT_ID` | Cloudflare account ID, used in the R2 endpoint |
 | `R2_ACCESS_KEY_ID` | R2 access key |
 | `R2_SECRET_ACCESS_KEY` | R2 secret key |
 | `R2_BUCKET_NAME` | R2 bucket that holds the files |
-| `CLOUDFLARE_ACCOUNT_ID` | Account ID for the D1 API |
-| `CLOUDFLARE_API_TOKEN` | Token with **D1 → Edit** permission |
-| `D1_DATABASE_ID` | Your D1 database UUID |
 
-### D1 setup
+### Supabase setup
 
-1. Create a database (Workers & Pages → D1) and copy its UUID into `D1_DATABASE_ID`.
-2. Create an API token (My Profile → API Tokens → **Edit Cloudflare Workers**) with **Workers D1** permissions.
-3. Apply the schema:
+1. Create a project at [supabase.com](https://supabase.com), then run `supabase/migrations/0001_nota_schema.sql` in the SQL Editor (creates tables + RLS).
+2. Create your admin user (Authentication → Users), then either set its `app_metadata` to `{"admin": true}` or add its email to `ADMIN_EMAILS`.
+3. Migrate existing data (needs the old D1 credentials one last time):
 
 ```bash
-npx wrangler d1 execute <database-name> --remote --file=migrations/0003_slim.sql
+export $(grep -v '^#' .env.local | xargs)
+node scripts/migrate-d1-to-supabase.mjs
 ```
 
-> When D1 is not configured or unreachable, reads fall back to the code-side catalog.
-> Endpoints that need the storage layer return an error (e.g. `503` from `/api/subjects`, `500` from `/api/upload`).
+> When Supabase is not configured or unreachable, reads fall back to the code-side catalog.
+> Endpoints that need the database return an error (e.g. `503` from `/api/subjects`, `500` from `/api/upload`).
 
 ## API routes
 
@@ -96,11 +100,12 @@ components/                  # SubjectList, DocumentSection, previewers,
 │                            # ContributePanel, SearchInput, Breadcrumbs, …
 lib/
 ├── data.ts                  # Base programme/subject catalog (static fallback)
-├── subjects.ts              # D1 ledger + catalog merge + subject CRUD
-├── d1.ts                    # D1 REST client + fallback helper
-├── r2.ts                    # R2 client: list, search, counts, documents
+├── subjects.ts              # Subject ledger + catalog merge + subject CRUD (Supabase)
+├── supabase.ts              # Supabase clients (browser/server/service-role) + fallback helper
+├── r2.ts                    # R2 client: list, search, counts, documents (unchanged)
 └── fileKinds.ts             # File type → viewer mapping
-migrations/                  # SQL migrations (0003 is the current schema)
+supabase/migrations/         # PostgreSQL schema (0001 is the current schema)
+scripts/                     # One-off D1 → Supabase data migration
 ```
 
 ## Scripts
