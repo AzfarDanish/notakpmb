@@ -120,7 +120,7 @@ export function MoreMenu({
                   position: 'fixed',
                   top: pos?.top ?? 0,
                   left: pos?.left ?? 0,
-                  zIndex: 50,
+                  zIndex: 70,
                   visibility: pos ? 'visible' : 'hidden',
                 }}
                 className="max-h-[min(24rem,calc(100dvh-1rem))] min-w-44 overflow-y-auto rounded-2xl border border-line bg-white py-2 shadow-[0_18px_60px_rgba(23,20,17,0.14)]"

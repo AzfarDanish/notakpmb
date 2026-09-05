@@ -8,6 +8,7 @@ import { ArrowRight, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-reac
 import { EmptyState } from '@/components/EmptyState';
 import { MoreMenu } from '@/components/MoreMenu';
 import dynamic from 'next/dynamic';
+import { OverlayPortal } from '@/components/OverlayPortal';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 const CoursePickerModal = dynamic(
@@ -160,27 +161,28 @@ function ModalCard({
   useScrollLock(true);
 
   return (
-    <>
+    <OverlayPortal>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={() => !disableClose && onClose()}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
       >
         <motion.div
+          data-overlay-panel
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          className="relative flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
+          className="relative z-[110] flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
         >
           <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">{children}</div>
         </motion.div>
       </motion.div>
-    </>
+    </OverlayPortal>
   );
 }
 

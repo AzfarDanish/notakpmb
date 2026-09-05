@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { X, ArrowUp, Loader2, FileText, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import { OverlayPortal } from '@/components/OverlayPortal';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
 export function ContributePanel({ subjectId }: { subjectId: string }) {
@@ -102,20 +103,21 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
 
       <AnimatePresence>
         {isOpen && (
-          <>
-            <motion.div 
+          <OverlayPortal>
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isPublished && setIsOpen(false)}
-              className="fixed inset-0 z-40 bg-ink/10 backdrop-blur-sm"
+              className="fixed inset-0 z-[80] bg-ink/10 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
+              data-overlay-panel
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[520px]"
+              className="fixed inset-y-0 right-0 z-[90] flex w-full max-w-full flex-col bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:w-[520px]"
             >
               <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-10">
                 <div className="mb-10 flex min-w-0 items-center justify-between gap-4">
@@ -243,7 +245,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
                 </button>
               </div>
             </motion.div>
-          </>
+          </OverlayPortal>
         )}
       </AnimatePresence>
     </>

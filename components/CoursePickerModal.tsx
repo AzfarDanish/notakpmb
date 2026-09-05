@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Check, Loader2, Search, X } from 'lucide-react'
+import { OverlayPortal } from '@/components/OverlayPortal'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { LookupResultsSkeleton } from '@/components/Skeleton'
 
@@ -28,19 +29,22 @@ function ModalCard({
   useScrollLock(true)
 
   return (
-    <div
-      onClick={() => !disableClose && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
-    >
+    <OverlayPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        className="relative flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
+        onClick={() => !disableClose && onClose()}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
       >
-        <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">{children}</div>
+        <div
+          data-overlay-panel
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          className="relative z-[110] flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
+        >
+          <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">{children}</div>
+        </div>
       </div>
-    </div>
+    </OverlayPortal>
   )
 }
 

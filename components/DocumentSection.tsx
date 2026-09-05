@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { MoreMenu } from '@/components/MoreMenu';
+import { OverlayPortal } from '@/components/OverlayPortal';
 import { PreviewSkeleton } from '@/components/Skeleton';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { getFileKind, type FileKind } from '@/lib/fileKinds';
@@ -56,7 +57,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const router = useRouter();
 
-  useScrollLock(Boolean(previewItem));
+  useScrollLock(Boolean(previewItem) || Boolean(deleteItem));
 
   const isEmpty = !items || items.length === 0;
 
@@ -169,20 +170,21 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
 
       <AnimatePresence>
         {previewItem && (
-          <>
-            <motion.div 
+          <OverlayPortal>
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setPreviewItem(null)}
-              className="fixed inset-0 z-40 bg-ink/10 backdrop-blur-sm"
+              className="fixed inset-0 z-[80] bg-ink/10 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
+              data-overlay-panel
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-4 z-50 flex max-h-[calc(100dvh-2rem)] w-auto max-w-full flex-col overflow-hidden rounded-[1.5rem] bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:inset-y-0 md:right-0 md:left-auto md:top-0 md:bottom-0 md:m-0 md:max-h-none md:h-auto md:max-h-none md:w-[min(900px,78vw)] md:rounded-none md:rounded-l-[1.5rem]"
+              className="fixed inset-4 z-[90] flex max-h-[calc(100dvh-2rem)] w-auto max-w-full flex-col overflow-hidden rounded-[1.5rem] bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:inset-y-0 md:right-0 md:left-auto md:top-0 md:bottom-0 md:m-0 md:max-h-none md:h-auto md:max-h-none md:w-[min(900px,78vw)] md:rounded-none md:rounded-l-[1.5rem]"
             >
               <div className="safe-x safe-y flex h-full flex-col overflow-hidden p-4 md:p-8">
                 <div className="mb-4 flex shrink-0 items-center justify-between gap-3 sm:mb-5 sm:gap-4">
@@ -226,28 +228,29 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 </div>
               </div>
             </motion.div>
-          </>
+          </OverlayPortal>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {deleteItem && (
-          <>
-            <motion.div 
+          <OverlayPortal>
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isDeleting && !deleteSuccess && setDeleteItem(null)}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
             >
-              <motion.div 
+              <motion.div
+                data-overlay-panel
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
-                className="relative flex max-h-[min(85dvh,640px)] min-h-[min(60dvh,420px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
+                className="relative z-[110] flex max-h-[min(85dvh,640px)] min-h-[min(60dvh,420px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
               >
                 <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">
                 <h3 className="text-dynamic mb-2 text-2xl font-black tracking-tight text-ink">Delete document</h3>
@@ -281,7 +284,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 </div>
               </motion.div>
             </motion.div>
-          </>
+          </OverlayPortal>
         )}
       </AnimatePresence>
     </section>
