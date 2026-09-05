@@ -184,34 +184,35 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-4 z-[90] flex max-h-[calc(100dvh-2rem)] w-auto max-w-full flex-col overflow-hidden rounded-[1.5rem] bg-paper shadow-[0_24px_90px_rgba(23,20,17,0.18)] md:inset-y-0 md:right-0 md:left-auto md:top-0 md:bottom-0 md:m-0 md:max-h-none md:h-auto md:max-h-none md:w-[min(900px,78vw)] md:rounded-none md:rounded-l-[1.5rem]"
+              role="dialog"
+              aria-modal="true"
+              className="fixed inset-0 z-[90] flex flex-col overflow-hidden bg-paper"
             >
-              <div className="safe-x safe-y flex h-full flex-col overflow-hidden p-4 md:p-8">
-                <div className="mb-4 flex shrink-0 items-center justify-between gap-3 sm:mb-5 sm:gap-4">
-                  <span className="min-w-0 flex-1 truncate pr-2 text-base font-black tracking-tight text-ink sm:text-lg">
-                    {previewItem.title}
-                  </span>
-                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                    <a
-                      href={previewItem.downloadUrl}
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sheet text-ink transition-colors hover:bg-white sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-semibold"
-                      title="Download"
-                      aria-label="Download"
-                    >
-                      <Download size={16} strokeWidth={1.5} />
-                      <span className="hidden sm:inline">Download</span>
-                    </a>
-                    <button 
-                      onClick={() => setPreviewItem(null)}
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-sheet hover:text-ink"
-                      aria-label="Close preview"
-                    >
-                      <X size={20} strokeWidth={1.5} />
-                    </button>
-                  </div>
+              <header className="safe-x flex shrink-0 items-center justify-between gap-3 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] sm:gap-4 sm:pb-4 sm:pt-[max(env(safe-area-inset-top),1rem)]">
+                <span className="min-w-0 flex-1 truncate pr-2 text-base font-black tracking-tight text-ink sm:text-lg">
+                  {previewItem.title}
+                </span>
+                <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                  <a
+                    href={previewItem.downloadUrl}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sheet text-ink transition-colors hover:bg-white sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-semibold"
+                    title="Download"
+                    aria-label="Download"
+                  >
+                    <Download size={16} strokeWidth={1.5} />
+                    <span className="hidden sm:inline">Download</span>
+                  </a>
+                  <button
+                    onClick={() => setPreviewItem(null)}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-sheet hover:text-ink"
+                    aria-label="Close preview"
+                  >
+                    <X size={20} strokeWidth={1.5} />
+                  </button>
                 </div>
+              </header>
 
-                <div className={`relative flex-1 overflow-hidden rounded-[1.5rem] border border-line bg-white ${previewItem.kind === 'native' ? '' : 'flex flex-col'}`}>
+              <div className={`relative min-h-0 flex-1 overflow-hidden border-t border-line bg-white ${previewItem.kind === 'native' ? '' : 'flex flex-col'}`}>
                   {previewItem.kind === 'docx' && (
                     <DocxPreview url={previewItem.url} title={previewItem.title} />
                   )}
@@ -226,7 +227,6 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                     <NativePreview key={previewItem.url} url={previewItem.url} />
                   )}
                 </div>
-              </div>
             </motion.div>
           </OverlayPortal>
         )}
