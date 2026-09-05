@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
@@ -10,12 +9,15 @@ import { MoreMenu } from '@/components/MoreMenu';
 import dynamic from 'next/dynamic';
 import { OverlayPortal } from '@/components/OverlayPortal';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useRefreshWithTransition } from '@/hooks/useRefreshWithTransition';
+import { notifyLiveSync } from '@/hooks/useLiveSync';
+import { SubjectListSkeleton } from '@/components/Skeleton';
+import type { Subject } from '@/lib/data';
 
 const CoursePickerModal = dynamic(
   () => import('@/components/CoursePickerModal').then((mod) => mod.CoursePickerModal),
   { ssr: false },
 );
-import type { Subject } from '@/lib/data';
 
 export function SubjectList({
   subjects,
@@ -28,13 +30,18 @@ export function SubjectList({
   programmeTitle: string
   canManage: boolean
 }) {
-  const router = useRouter();
+  const { refresh, isPending } = useRefreshWithTransition();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
   const [renameSubject, setRenameSubject] = useState<Subject | null>(null);
 
   return (
-    <>
+    <div className="relative">
+      {isPending && (
+        <div className="absolute inset-0 z-10 bg-paper/70 backdrop-blur-[1px]">
+          <SubjectListSkeleton />
+        </div>
+      )}
       {subjects.length === 0 && (
         <EmptyState
           title={`No subjects yet for ${programmeTitle}`}
@@ -93,14 +100,13 @@ export function SubjectList({
           </button>
         </div>
       )}
-
       <AnimatePresence>
         {addOpen && programmeId === 'dcs' && (
           <CoursePickerModal
             onClose={() => setAddOpen(false)}
             onAdded={() => {
               setAddOpen(false);
-              router.refresh();
+              refresh();
             }}
             programmeId={programmeId}
             existingSubjects={subjects}
@@ -113,7 +119,7 @@ export function SubjectList({
             onClose={() => setAddOpen(false)}
             onAdded={() => {
               setAddOpen(false);
-              router.refresh();
+              refresh();
             }}
             programmeId={programmeId}
           />
@@ -127,7 +133,7 @@ export function SubjectList({
             onClose={() => setDeleteSubject(null)}
             onDeleted={() => {
               setDeleteSubject(null);
-              router.refresh();
+              refresh();
             }}
           />
         )}
@@ -140,12 +146,12 @@ export function SubjectList({
             onClose={() => setRenameSubject(null)}
             onRenamed={() => {
               setRenameSubject(null);
-              router.refresh();
+              refresh();
             }}
           />
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
 
@@ -222,7 +228,8 @@ function AddSubjectModal({
         return;
       }
       setSuccess(true);
-      setTimeout(onAdded, 1200);
+      notifyLiveSync('subjects');
+      onAdded();
     } catch (err) {
       console.error('Add subject error:', err);
       setError('Failed to add subject');
@@ -348,7 +355,9 @@ function DeleteSubjectModal({
         return;
       }
       setSuccess(true);
-      setTimeout(onDeleted, 1200);
+      notifyLiveSync('subjects');
+      notifyLiveSync('r2-files');
+      onDeleted();
     } catch (err) {
       console.error('Delete subject error:', err);
       setError('Failed to delete subject');
@@ -452,7 +461,8 @@ function RenameSubjectModal({
         return;
       }
       setSuccess(true);
-      setTimeout(onRenamed, 1200);
+      notifyLiveSync('subjects');
+      onRenamed();
     } catch (err) {
       console.error('Rename subject error:', err);
       setError('Failed to rename subject');

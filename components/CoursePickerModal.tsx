@@ -5,6 +5,7 @@ import { Check, Loader2, Search, X } from 'lucide-react'
 import { OverlayPortal } from '@/components/OverlayPortal'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { LookupResultsSkeleton } from '@/components/Skeleton'
+import { notifyLiveSync } from '@/hooks/useLiveSync'
 
 type CourseHit = {
   id: string
@@ -145,7 +146,8 @@ export function CoursePickerModal({
         return
       }
       setSuccess(true)
-      setTimeout(onAdded, 1000)
+      notifyLiveSync('subjects')
+      onAdded()
     } catch (err) {
       console.error('Add subject error:', err)
       setError('Failed to add subject')
@@ -188,7 +190,7 @@ export function CoursePickerModal({
           </button>
         </div>
       ) : (
-        <>
+        <div className="flex min-h-full flex-col">
           <div className="relative mb-4">
             <Search size={16} strokeWidth={1.5} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
             <input
@@ -222,12 +224,12 @@ export function CoursePickerModal({
             </div>
           )}
 
-          {/* Hits list */}
-          <div className="max-h-[18rem] overflow-auto rounded-2xl border border-line">
+          {/* Hits list — expands to fill available space */}
+          <div className="flex max-h-[18rem] min-h-[12rem] flex-1 flex-col overflow-auto rounded-2xl border border-line">
             {loading && displayHits.length === 0 && showSkeleton ? (
               <LookupResultsSkeleton />
             ) : displayHits.length === 0 && !loading ? (
-              <div className="px-4 py-8 text-center">
+              <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 text-center">
                 {query.trim().length >= 1 ? (
                   <>
                     <p className="text-sm font-semibold text-ink">No course found for “{query.trim()}”</p>
@@ -268,43 +270,46 @@ export function CoursePickerModal({
             )}
           </div>
 
-          <p className="text-dynamic mt-3 text-xs font-medium text-muted">
-            {query.trim() ? `${displayHits.length} result${displayHits.length === 1 ? '' : 's'} from cloud` : 'Type to search. Strict pick-only.'}
-            {' · '}tag <span className="text-ink">azferish</span> if missing
-          </p>
+          {/* Bottom section — helper + actions grouped and anchored at bottom */}
+          <div className="mt-auto pt-4">
+            <p className="text-dynamic text-xs font-medium text-muted">
+              {query.trim() ? `${displayHits.length} result${displayHits.length === 1 ? '' : 's'} from cloud` : 'Type to search. Strict pick-only.'}
+              {' · '}tag <span className="text-ink">azferish</span> if missing
+            </p>
 
-          {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-          {success && <p className="mt-3 text-sm text-green-600">Subject added. Refreshing...</p>}
+            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+            {success && <p className="mt-2 text-sm text-green-600">Subject added. Refreshing...</p>}
 
-          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting || success}
-              className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={!selected || isSubmitting || success}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" /> Adding...
-                </>
-              ) : success ? (
-                <>
-                  <Check size={14} /> Added
-                </>
-              ) : (
-                'Add subject'
-              )}
-            </button>
+            <div className="mt-3 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting || success}
+                className="px-5 py-3 text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={!selected || isSubmitting || success}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-accent disabled:opacity-40"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Adding...
+                  </>
+                ) : success ? (
+                  <>
+                    <Check size={14} /> Added
+                  </>
+                ) : (
+                  'Add subject'
+                )}
+              </button>
+            </div>
           </div>
-        </>
+        </div>
       )}
     </ModalCard>
   )

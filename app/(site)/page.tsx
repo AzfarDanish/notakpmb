@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { ArrowRight, BookOpen, MessageSquarePlus, Search } from 'lucide-react';
+import { ArrowRight, MessageSquarePlus, Search } from 'lucide-react';
 import { getAllFileCounts } from '@/lib/r2';
 import { getProgrammes } from '@/lib/subjects';
-import { getAllCourses } from '@/lib/courses';
 import { CourseLookup } from '@/components/CourseLookup';
 import { ProgrammeListSkeleton } from '@/components/Skeleton';
 
@@ -52,13 +51,6 @@ async function ProgrammesPanel() {
   );
 }
 
-async function CatalogCount() {
-  const catalog = await getAllCourses();
-  const catalogCount = catalog.length;
-
-  return <>{catalogCount} courses</>;
-}
-
 export default function Home() {
   return (
     <main id="main" className="page-shell">
@@ -75,18 +67,12 @@ export default function Home() {
 
           <div className="mt-8 max-w-xl rounded-[1.75rem] bg-sheet p-3 md:mt-9 md:rounded-[2rem] md:p-4">
             <CourseLookup size="lg" placeholder="Type a subject or code" />
-            <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
-              <Link href="/courses" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
-                <BookOpen size={16} strokeWidth={1.7} />
-                <Suspense fallback="Courses">
-                  <CatalogCount />
-                </Suspense>
-              </Link>
-              <Link href="/search" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper">
+            <div className="mt-3 grid grid-cols-1 gap-2 px-1 sm:grid-cols-[1fr_auto] sm:gap-2">
+              <Link href="/courses" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper sm:justify-start">
                 <Search size={16} strokeWidth={1.7} />
-                Search files
+                Browse courses
               </Link>
-              <Link href="/feedback" className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-accent">
+              <Link href="/feedback" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-accent sm:justify-self-end">
                 <MessageSquarePlus size={16} strokeWidth={1.7} />
                 Feedback
               </Link>

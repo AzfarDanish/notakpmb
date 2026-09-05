@@ -50,8 +50,8 @@ export async function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/search" className="text-white/65 transition-colors hover:text-white">
-                  Search
+                <Link href="/courses" className="text-white/65 transition-colors hover:text-white">
+                  Courses
                 </Link>
               </li>
               <li>

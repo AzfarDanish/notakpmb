@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { Suspense } from 'react';
 import { Footer } from '@/components/Footer';
 import { FooterWordmark } from '@/components/FooterWordmark';
+import { LiveSyncProvider } from '@/components/LiveSyncProvider';
 import './globals.css';
 
 const sfProDisplay = localFont({
@@ -95,6 +96,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${sfProDisplay.variable}`}>
       <body className="flex min-h-screen min-w-0 flex-col bg-paper font-sans text-ink antialiased" suppressHydrationWarning>
+        <LiveSyncProvider />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-2xl focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-paper"

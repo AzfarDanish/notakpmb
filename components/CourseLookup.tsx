@@ -331,8 +331,8 @@ export function CourseLookup({
                 </Link>
               ) : null
             ) : (
-              <Link href={hits[0]?.href ?? '/search?q='+encodeURIComponent(query.trim())} className="transition-colors hover:text-ink">
-                {hits[0] ? 'Open first' : 'Search page'}
+              <Link href={hits[0]?.href ?? '/courses'} className="transition-colors hover:text-ink">
+                {hits[0] ? 'Open first' : 'Browse courses'}
               </Link>
             )}
           </div>

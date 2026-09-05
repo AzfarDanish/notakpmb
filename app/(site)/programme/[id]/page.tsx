@@ -124,9 +124,9 @@ export default async function ProgrammePage({
             <Suspense fallback={<div className="h-[46px] w-full animate-pulse rounded-2xl bg-white/70 md:w-80" aria-hidden="true" />}>
               <ProgrammeSearch id={id} />
             </Suspense>
-            <Link href="/search" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-paper sm:shrink-0">
+            <Link href="/courses" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-ink transition-colors hover:bg-paper sm:shrink-0">
               <Search size={16} strokeWidth={1.7} />
-              Search page
+              Browse courses
             </Link>
           </div>
         </div>

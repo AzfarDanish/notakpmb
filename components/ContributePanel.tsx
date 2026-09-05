@@ -3,9 +3,10 @@
 import { useState, useRef } from 'react';
 import { X, ArrowUp, Loader2, FileText, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useRouter } from 'next/navigation';
 import { OverlayPortal } from '@/components/OverlayPortal';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { useRefreshWithTransition } from '@/hooks/useRefreshWithTransition';
+import { notifyLiveSync } from '@/hooks/useLiveSync';
 
 export function ContributePanel({ subjectId }: { subjectId: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,7 +17,7 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
   const [isPublished, setIsPublished] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
+  const { refresh } = useRefreshWithTransition();
 
   useScrollLock(isOpen);
 
@@ -61,12 +62,13 @@ export function ContributePanel({ subjectId }: { subjectId: string }) {
 
       if (res.ok) {
         setIsPublished(true);
+        notifyLiveSync('r2-files');
+        refresh();
         setTimeout(() => {
           setIsOpen(false);
           setTitle('');
           setFile(null);
           setIsPublished(false);
-          router.refresh();
         }, 1200);
       } else {
         let errorMessage = 'Upload failed. Is R2 configured?';
