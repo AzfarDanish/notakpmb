@@ -14,6 +14,24 @@ export async function POST(req: NextRequest) {
     if (!file || !subjectId || !category || !title) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    if (typeof subjectId !== 'string' || subjectId.length > 200 || subjectId.includes('..') || subjectId.startsWith('_') || subjectId.startsWith('/')) {
+      return NextResponse.json({ error: 'Invalid subject' }, { status: 400 });
+    }
+    if (typeof category !== 'string' || category.length > 40 || !/^[a-zA-Z0-9_-]+$/.test(category)) {
+      return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
+    }
+    const cleanTitle = typeof title === 'string' ? title.replace(/\s+/g, ' ').trim() : '';
+    if (!cleanTitle || cleanTitle.length > 200) {
+      return NextResponse.json({ error: 'Invalid title' }, { status: 400 });
+    }
+    if (typeof file.size === 'number' && file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large (5MB max)' }, { status: 400 });
+    }
+    const allowedTypes = new Set(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']);
+    const safeName = (file.name || '').slice(0, 200);
+    if (!allowedTypes.has(file.type) && !/\.(pdf|doc|docx|txt)$/i.test(safeName)) {
+      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
+    }
 
     const client = getR2Client();
     if (!client || !process.env.R2_BUCKET_NAME) {
@@ -21,7 +39,8 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const key = `${subjectId}/${category.toLowerCase()}/${Date.now()}-${file.name}`;
+    const baseName = (file.name || 'file').replace(/[^\w.\-]+/g, '_').slice(0, 120);
+    const key = `${subjectId}/${category.toLowerCase()}/${Date.now()}-${baseName}`;
 
     await client.send(new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
@@ -29,8 +48,8 @@ export async function POST(req: NextRequest) {
       Body: buffer,
       ContentType: file.type,
       Metadata: {
-        title: encodeURIComponent(title),
-        originalName: encodeURIComponent(file.name),
+        title: encodeURIComponent(cleanTitle),
+        originalName: encodeURIComponent(safeName),
       }
     }));
 

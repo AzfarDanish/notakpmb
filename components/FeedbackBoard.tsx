@@ -10,19 +10,25 @@ import type { FeedbackItem, FeedbackSort, FeedbackStatus } from '@/lib/feedback'
 type StatusFilter = FeedbackStatus | 'all';
 
 const STATUS_LABELS: Record<FeedbackStatus, string> = {
-  open: 'Open',
+  new: 'New',
+  open: 'New',
+  reviewed: 'Reviewed',
   planned: 'Planned',
   in_progress: 'In progress',
   completed: 'Completed',
   declined: 'Declined',
+  archived: 'Archived',
 };
 
 const STATUS_STYLES: Record<FeedbackStatus, string> = {
+  new: 'bg-white text-muted border-line',
   open: 'bg-white text-muted border-line',
+  reviewed: 'bg-violet-50 text-violet-700 border-violet-100',
   planned: 'bg-blue-50 text-blue-700 border-blue-100',
   in_progress: 'bg-amber-50 text-amber-700 border-amber-100',
   completed: 'bg-green-50 text-green-700 border-green-100',
   declined: 'bg-neutral-100 text-neutral-600 border-neutral-200',
+  archived: 'bg-neutral-100 text-neutral-500 border-neutral-200',
 };
 
 export function FeedbackBoard() {

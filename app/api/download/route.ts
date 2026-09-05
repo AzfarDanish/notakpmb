@@ -21,9 +21,10 @@ function getContentType(filename: string): string {
 export async function GET(req: NextRequest) {
   const key      = req.nextUrl.searchParams.get('key');
   const action   = req.nextUrl.searchParams.get('action') || 'preview';
-  const filename = req.nextUrl.searchParams.get('filename')
+  const rawFilename = req.nextUrl.searchParams.get('filename')
     ?? key?.split('/').pop()?.replace(/^\d+-/, '')
     ?? 'download';
+  const filename = rawFilename.replace(/["\r\n]/g, '_').slice(0, 200) || 'download';
 
   if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 });
 
@@ -41,7 +42,11 @@ export async function GET(req: NextRequest) {
     const response = await client.send(command);
     const stream = response.Body as ReadableStream;
 
-    const contentType = response.ContentType ?? getContentType(filename);
+    const stored = response.ContentType ?? '';
+    const allowedPreview = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/plain', 'text/csv']);
+    const contentType = stored && (action === 'download' || allowedPreview.has(stored) || stored.startsWith('image/'))
+      ? stored
+      : getContentType(filename);
     const disposition = action === 'download'
       ? `attachment; filename="${filename}"`
       : `inline; filename="${filename}"`;

@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { d1Or, queryD1 } from '@/lib/d1';
 
-export type FeedbackStatus = 'open' | 'planned' | 'in_progress' | 'completed' | 'declined';
+export type FeedbackStatus = 'new' | 'reviewed' | 'planned' | 'in_progress' | 'completed' | 'declined' | 'archived' | 'open';
 export type FeedbackSort = 'popular' | 'newest';
 
 export type FeedbackItem = {
@@ -14,7 +14,7 @@ export type FeedbackItem = {
   hasVoted: boolean
 }
 
-const VALID_STATUSES = new Set<FeedbackStatus>(['open', 'planned', 'in_progress', 'completed', 'declined']);
+const VALID_STATUSES = new Set<FeedbackStatus>(['new', 'reviewed', 'planned', 'in_progress', 'completed', 'declined', 'archived', 'open']);
 const MAX_BODY_LENGTH = 500;
 const MIN_BODY_LENGTH = 4;
 
@@ -44,15 +44,51 @@ export function normalizeStatusFilter(value: string | null): FeedbackStatus | 'a
 }
 
 function mapFeedbackRow(row: Record<string, unknown>): FeedbackItem {
+  const raw = String(row.status ?? 'new');
+  // Legacy alias: 'open' (pre-0007) maps to 'new'
+  const status = (raw === 'open' ? 'new' : raw) as FeedbackStatus;
   return {
     id: String(row.id ?? ''),
     body: String(row.body ?? ''),
-    status: String(row.status ?? 'open') as FeedbackStatus,
+    status,
     votesCount: Number(row.votes_count ?? 0),
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
     hasVoted: Boolean(Number(row.has_voted ?? 0)),
   };
+}
+
+export async function searchFeedbackAdmin(query: string, sort: FeedbackSort = 'newest', status: FeedbackStatus | 'all' = 'all', limit = 50): Promise<FeedbackItem[]> {
+  const q = query.trim();
+  const orderBy = sort === 'newest' ? 'created_at DESC, votes_count DESC' : 'votes_count DESC, created_at DESC';
+  const where: string[] = [];
+  const params: (string | number | null)[] = [];
+  if (status !== 'all') {
+    if (status === 'new') {
+      where.push(`(f.status = 'new' OR f.status = 'open')`);
+    } else {
+      where.push(`f.status = ?`);
+      params.push(status);
+    }
+  }
+  if (q) {
+    where.push(`(lower(f.body) LIKE ? OR lower(f.id) LIKE ?)`);
+    const like = `%${q.toLowerCase()}%`;
+    params.push(like, like);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const res = await queryD1(
+    `SELECT f.id, f.body, f.status, f.votes_count, f.created_at, f.updated_at, 0 AS has_voted
+     FROM feedback_items f ${whereSql} ORDER BY ${orderBy} LIMIT ?`,
+    [...params, Math.min(Math.max(limit, 1), 100)],
+  );
+  return res.results.map(mapFeedbackRow);
+}
+
+export async function getFeedbackCounts(): Promise<{ total: number; votes: number }> {
+  const res = await queryD1(`SELECT COUNT(*) as total, COALESCE(SUM(votes_count),0) as votes FROM feedback_items`);
+  const row = res.results[0] ?? {};
+  return { total: Number(row.total ?? 0), votes: Number(row.votes ?? 0) };
 }
 
 export const listFeedback = cache(async ({
@@ -71,7 +107,8 @@ export const listFeedback = cache(async ({
     ? `EXISTS(SELECT 1 FROM feedback_votes v WHERE v.feedback_id = f.id AND v.voter_hash = ?) AS has_voted`
     : '0 AS has_voted';
   const params: (string | number | null)[] = voterHash ? [voterHash] : [];
-  const where = status === 'all' ? '' : 'WHERE f.status = ?';
+  // Public board: 'all' excludes archived (admin-only). Explicit status still works.
+  const where = status === 'all' ? `WHERE f.status != 'archived'` : 'WHERE f.status = ?';
   if (status !== 'all') params.push(status);
 
   return d1Or(async () => {

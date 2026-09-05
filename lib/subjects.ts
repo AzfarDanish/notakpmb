@@ -25,7 +25,7 @@ export type ManagedSubject = Subject & {
   programmeId: string
 }
 
-type SubjectKind = 'custom' | 'rename' | 'deletion'
+type SubjectKind = 'custom' | 'rename' | 'deletion' | 'hidden'
 
 type SubjectRow = {
   subjectId: string
@@ -68,10 +68,12 @@ function partitionRows(rows: SubjectRow[]): {
   customSubjects: ManagedSubject[]
   renames: Map<string, { title: string; code?: string }>
   deletedIds: Set<string>
+  hiddenIds: Set<string>
 } {
   const customSubjects: ManagedSubject[] = []
   const renames = new Map<string, { title: string; code?: string }>()
   const deletedIds = new Set<string>()
+  const hiddenIds = new Set<string>()
 
   for (const row of rows) {
     if (row.kind === 'custom' && row.programmeId) {
@@ -88,10 +90,12 @@ function partitionRows(rows: SubjectRow[]): {
       });
     } else if (row.kind === 'deletion') {
       deletedIds.add(row.subjectId);
+    } else if ((row.kind as string) === 'hidden') {
+      hiddenIds.add(row.subjectId);
     }
   }
 
-  return { customSubjects, renames, deletedIds };
+  return { customSubjects, renames, deletedIds, hiddenIds };
 }
 
 function applyRename<T extends Subject>(subject: T, renames: Map<string, { title: string; code?: string }>): T {
@@ -105,14 +109,14 @@ function applyRename<T extends Subject>(subject: T, renames: Map<string, { title
 }
 
 function withDeltas(programme: Programme, rows: SubjectRow[]): Programme {
-  const { customSubjects, renames, deletedIds } = partitionRows(rows);
+  const { customSubjects, renames, deletedIds, hiddenIds } = partitionRows(rows);
 
   const subjects = programme.subjects
-    .filter((s) => !deletedIds.has(s.id))
+    .filter((s) => !deletedIds.has(s.id) && !hiddenIds.has(s.id))
     .map((s) => applyRename(s, renames));
 
   const custom = customSubjects
-    .filter((s) => s.programmeId === programme.id)
+    .filter((s) => s.programmeId === programme.id && !deletedIds.has(s.id) && !hiddenIds.has(s.id))
     .map((s) => ({ id: s.id, title: s.title, code: s.code }));
 
   return { ...programme, subjects: [...subjects, ...custom] };
@@ -122,24 +126,36 @@ async function loadDeltas() {
   return listSubjectRows();
 }
 
+async function getHiddenProgrammeIds(): Promise<Set<string>> {
+  try {
+    const res = await queryD1(`SELECT id FROM programmes WHERE is_hidden = 1`);
+    return new Set(res.results.map((r) => String(r.id ?? '')));
+  } catch {
+    return new Set();
+  }
+}
+
 export const getProgrammes = cache(async (): Promise<Programme[]> => {
   const fallback = getStaticProgrammes().map((p) => ({ ...p, subjects: [] }));
   return d1Or(async () => {
-    const [cloudProgrammes, deltaRows] = await Promise.all([
+    const [cloudProgrammes, deltaRows, hidden] = await Promise.all([
       getCloudProgrammesWithCourses(),
       loadDeltas(),
+      getHiddenProgrammeIds(),
     ]);
-    return cloudProgrammes.map((p) => withDeltas(p, deltaRows));
+    return cloudProgrammes.filter((p) => !hidden.has(p.id)).map((p) => withDeltas(p, deltaRows));
   }, fallback);
 });
 
 export const getProgramme = cache(async (id: string): Promise<Programme | undefined> => {
   const fallback = getStaticProgramme(id);
   return d1Or(async () => {
-    const [cloudProgrammes, deltaRows] = await Promise.all([
+    const [cloudProgrammes, deltaRows, hidden] = await Promise.all([
       getCloudProgrammesWithCourses(),
       loadDeltas(),
+      getHiddenProgrammeIds(),
     ]);
+    if (hidden.has(id)) return undefined;
     const programme = cloudProgrammes.find((p) => p.id === id);
     if (!programme) return fallback ? withDeltas(fallback, deltaRows) : undefined;
     return withDeltas(programme, deltaRows);
@@ -174,8 +190,8 @@ export const getSubjectWithCustom = cache(async (
       loadDeltas(),
       getCloudCourse(id),
     ]);
-    const { customSubjects, renames, deletedIds } = partitionRows(deltaRows);
-    if (deletedIds.has(id)) return undefined;
+    const { customSubjects, renames, deletedIds, hiddenIds } = partitionRows(deltaRows);
+    if (deletedIds.has(id) || hiddenIds.has(id)) return undefined;
 
     if (cloudCtx) {
       return {
