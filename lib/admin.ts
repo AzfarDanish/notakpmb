@@ -77,10 +77,13 @@ export async function listActivity(limit = 50): Promise<ActivityItem[]> {
   }
 }
 
+const MAX_ACTIVITY_ROWS = 50;
+
 export async function logActivity(action: string, entityType: string, entityId = '', meta = '') {
   const id = `act-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
   try {
-    const { error } = await supabaseAdmin().from('activity_log').insert({
+    const sb = supabaseAdmin();
+    const { error } = await sb.from('activity_log').insert({
       id,
       action: action.slice(0, 80),
       entity_type: entityType.slice(0, 40),
@@ -88,6 +91,21 @@ export async function logActivity(action: string, entityType: string, entityId =
       meta: String(meta).slice(0, 2000),
     });
     if (error) throw error;
+    // Keep the log capped: newest 50 stay, oldest fall off automatically.
+    try {
+      const { data } = await sb
+        .from('activity_log')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(MAX_ACTIVITY_ROWS, MAX_ACTIVITY_ROWS + 200);
+      const overflow = (data ?? []) as { id: string }[];
+      if (overflow.length > 0) {
+        await sb.from('activity_log').delete().in('id', overflow.map((r) => r.id));
+      }
+    } catch {
+      // trim failure must never break the primary mutation
+    }
   } catch {
     // Activity logging must never break the primary mutation.
   }

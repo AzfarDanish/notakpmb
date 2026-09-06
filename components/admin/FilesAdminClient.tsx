@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, Download, Eye, Loader2, Pencil, Trash2, Upload } from 'lucide-react';
 import { SearchResultsSkeleton } from '@/components/Skeleton';
 import { AdminEmpty, AdminError } from '@/components/admin/ui';
+import { ADMIN_PAGE_SIZE, Pagination } from '@/components/admin/Pagination';
+import { MoreMenu } from '@/components/MoreMenu';
 import { notifyLiveSync } from '@/hooks/useLiveSync';
 import { getFileKind } from '@/lib/fileKinds';
 
@@ -14,6 +16,8 @@ export function FilesAdminClient() {
   const [q, setQ] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [sort, setSort] = useState('newest');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -31,19 +35,21 @@ export function FilesAdminClient() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ sort });
+      const params = new URLSearchParams({ sort, page: String(page), limit: String(ADMIN_PAGE_SIZE) });
       if (q.trim()) params.set('q', q.trim());
       if (subjectId.trim()) params.set('subjectId', subjectId.trim());
       const res = await fetch(`/api/admin/files?${params.toString()}`);
       if (res.status === 403) throw new Error('Not authorized');
       if (!res.ok) throw new Error('Failed to list files');
-      setItems(((await res.json()) as { items: Item[] }).items ?? []);
+      const data = (await res.json()) as { items: Item[]; total: number };
+      setItems(data.items ?? []);
+      setTotal(Number(data.total ?? 0));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to list files');
     } finally {
       setLoading(false);
     }
-  }, [q, subjectId, sort]);
+  }, [q, subjectId, sort, page]);
 
   useEffect(() => {
     const t = setTimeout(load, q || subjectId ? 300 : 0);
@@ -65,10 +71,15 @@ export function FilesAdminClient() {
     try {
       const res = await fetch(`/api/admin/files?key=${encodeURIComponent(deleteTarget.key)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
+      const wasLastOnPage = items.length === 1 && page > 1;
       setItems((cur) => cur.filter((x) => x.key !== deleteTarget.key));
+      setTotal((t) => Math.max(0, t - 1));
       setDeleteDone(true);
       notifyLiveSync('r2-files');
-      setTimeout(closeDelete, 1200);
+      setTimeout(() => {
+        closeDelete();
+        if (wasLastOnPage) setPage((p) => Math.max(1, p - 1));
+      }, 1200);
     } catch {
       setDeleteError('Delete failed. Try again.');
     } finally {
@@ -103,9 +114,9 @@ export function FilesAdminClient() {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="grid min-w-0 grid-cols-1 gap-2 rounded-[1.75rem] bg-sheet p-3 sm:grid-cols-[1fr_10rem_9rem] md:p-4">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title, filename, key…" className="min-h-11 w-full rounded-2xl border border-line bg-white px-4 py-2 text-sm outline-none focus:border-ink" />
-        <input value={subjectId} onChange={(e) => setSubjectId(e.target.value)} placeholder="Subject ID" className="min-h-11 w-full rounded-2xl border border-line bg-white px-4 py-2 font-mono text-sm outline-none focus:border-ink" />
-        <select value={sort} onChange={(e) => setSort(e.target.value)} className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ink" aria-label="Sort files">
+        <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search title, filename, key…" className="min-h-11 w-full rounded-2xl border border-line bg-white px-4 py-2 text-sm outline-none focus:border-ink" />
+        <input value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setPage(1); }} placeholder="Subject ID" className="min-h-11 w-full rounded-2xl border border-line bg-white px-4 py-2 font-mono text-sm outline-none focus:border-ink" />
+        <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }} className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ink" aria-label="Sort files">
           <option value="newest">Newest</option>
           <option value="name">Name</option>
           <option value="size">Size</option>
@@ -119,19 +130,63 @@ export function FilesAdminClient() {
       {!loading && !error && items.length > 0 && (
         <div className="divide-y divide-line/70">
           {items.map((it) => (
-            <div key={it.key} className="min-w-0 rounded-2xl px-2 py-4 md:px-4">
-              <p className="text-dynamic truncate text-base font-bold text-ink">{it.title}</p>
-              <p className="mt-1 truncate font-mono text-xs text-muted">{it.key}</p>
-              <p className="mt-1 text-xs text-muted">{it.subjectId} · {it.date} · {it.size} · {getFileKind(it.originalName || it.title)}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => setPreviewUrl(`/api/download?key=${encodeURIComponent(it.key)}&action=preview`)} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold hover:bg-sheet"><Eye size={15} /> Preview</button>
-                <a href={`/api/download?key=${encodeURIComponent(it.key)}&action=download`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold hover:bg-sheet"><Download size={15} /> Download</a>
-                <button onClick={() => { setRenameTarget(it); setRenameTitle(it.title); setRenameError(''); }} disabled={busyKey === it.key} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold hover:bg-sheet disabled:opacity-50"><Pencil size={15} /> Rename</button>
-                <button onClick={() => { setDeleteTarget(it); setDeleteError(''); setDeleteDone(false); }} disabled={busyKey === it.key} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"><Trash2 size={15} /> Delete</button>
+            <div key={it.key} className="flex min-w-0 items-start gap-2 rounded-2xl px-2 py-4 md:px-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-dynamic truncate text-base font-bold text-ink">{it.title}</p>
+                <p className="mt-1 truncate font-mono text-xs text-muted">{it.key}</p>
+                <p className="mt-1 text-xs text-muted">{it.subjectId} · {it.date} · {it.size} · {getFileKind(it.originalName || it.title)}</p>
               </div>
+              <span className="shrink-0">
+                <MoreMenu
+                  label={`Actions for ${it.title}`}
+                  items={[
+                    {
+                      key: 'preview',
+                      label: 'Preview',
+                      icon: <Eye size={16} strokeWidth={1.5} />,
+                      onClick: () => setPreviewUrl(`/api/download?key=${encodeURIComponent(it.key)}&action=preview`),
+                    },
+                    {
+                      key: 'download',
+                      label: 'Download',
+                      icon: <Download size={16} strokeWidth={1.5} />,
+                      onClick: () => {
+                        window.location.href = `/api/download?key=${encodeURIComponent(it.key)}&action=download`;
+                      },
+                    },
+                    {
+                      key: 'rename',
+                      label: 'Rename',
+                      icon: <Pencil size={16} strokeWidth={1.5} />,
+                      onClick: () => {
+                        if (busyKey === it.key) return;
+                        setRenameTarget(it);
+                        setRenameTitle(it.title);
+                        setRenameError('');
+                      },
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete',
+                      danger: true,
+                      icon: <Trash2 size={16} strokeWidth={1.5} />,
+                      onClick: () => {
+                        if (busyKey === it.key) return;
+                        setDeleteTarget(it);
+                        setDeleteError('');
+                        setDeleteDone(false);
+                      },
+                    },
+                  ]}
+                />
+              </span>
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && !error && (
+        <Pagination page={page} totalPages={Math.ceil(total / ADMIN_PAGE_SIZE)} onChange={setPage} />
       )}
 
       {previewUrl && (

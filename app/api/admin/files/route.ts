@@ -5,7 +5,10 @@ import { getR2Client } from '@/lib/r2';
 import { logActivity, requireAdmin } from '@/lib/admin';
 import { supabaseAdmin } from '@/lib/supabase';
 
-const MAX_LIST = 100;
+const MAX_LIST = 30;
+// Safety caps so a huge bucket can never force an unbounded scan.
+const MAX_SCAN_KEYS = 2000;
+const MAX_SEARCH_HEADS = 500;
 
 function safeKey(key: unknown): string | null {
   if (typeof key !== 'string' || !key || key.length > 500) return null;
@@ -21,9 +24,13 @@ export async function GET(req: NextRequest) {
   const subjectId = (req.nextUrl.searchParams.get('subjectId') ?? '').trim();
   const programmeId = (req.nextUrl.searchParams.get('programmeId') ?? '').trim();
   const sort = req.nextUrl.searchParams.get('sort') ?? 'newest';
+  const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || MAX_LIST, 1), MAX_LIST);
+  const page = Math.max(Number(req.nextUrl.searchParams.get('page')) || 1, 1);
   const client = getR2Client();
   const bucket = process.env.R2_BUCKET_NAME;
   if (!client || !bucket) return NextResponse.json({ error: 'R2 not configured' }, { status: 500 });
+  const s3 = client;
+  const bucketName = bucket;
   try {
     let subjectFilter: Set<string> | null = null;
     if (programmeId) {
@@ -31,45 +38,90 @@ export async function GET(req: NextRequest) {
       const subs = await getSubjectsForProgramme(programmeId).catch(() => []);
       subjectFilter = new Set(subs.map((s) => s.id));
     }
-    const items: { key: string; subjectId: string; title: string; originalName: string; date: string; size: string; sizeBytes: number; lastModified: string }[] = [];
+    type Listed = { key: string; sid: string; sizeBytes: number; lastModified: string };
+    // Phase 1: list keys only (no per-object Heads) with prefix/set filters.
+    // A subjectId filter becomes an R2 Prefix so the bucket scan stays narrow.
+    const listed: Listed[] = [];
     let token: string | undefined;
-    let pages = 0;
-    while (pages < 5 && items.length < MAX_LIST * 2) {
-      const res = await client.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token, MaxKeys: 200 }));
+    let scanned = 0;
+    let exhausted = false;
+    const prefix = subjectId ? `${subjectId}/` : undefined;
+    while (scanned < MAX_SCAN_KEYS) {
+      const res = await s3.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, ContinuationToken: token, MaxKeys: 200 }));
       for (const obj of res.Contents ?? []) {
         if (!obj.Key) continue;
         const sid = obj.Key.split('/')[0] ?? '';
         if (!sid || sid.startsWith('_')) continue;
-        if (subjectId && sid !== subjectId) continue;
         if (subjectFilter && !subjectFilter.has(sid)) continue;
-        const fileName = obj.Key.split('/').pop() ?? '';
-        let title = fileName;
-        let originalName = fileName.replace(/^\d+-/, '');
-        try {
-          const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: obj.Key }));
-          if (head.Metadata?.title) title = decodeURIComponent(head.Metadata.title);
-          if (head.Metadata?.originalname) originalName = decodeURIComponent(head.Metadata.originalname);
-        } catch {
-          // keep filename fallback
-        }
-        if (q && !`${title} ${originalName} ${fileName} ${obj.Key}`.toLowerCase().includes(q)) continue;
-        const sizeBytes = obj.Size ?? 0;
-        items.push({
-          key: obj.Key, subjectId: sid, title, originalName,
-          date: obj.LastModified ? obj.LastModified.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '',
-          size: sizeBytes < 1024 * 1024 ? `${Math.round(sizeBytes / 1024)} KB` : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`,
-          sizeBytes, lastModified: obj.LastModified ? obj.LastModified.toISOString() : '',
+        listed.push({
+          key: obj.Key, sid,
+          sizeBytes: obj.Size ?? 0,
+          lastModified: obj.LastModified ? obj.LastModified.toISOString() : '',
         });
-        if (items.length >= MAX_LIST) break;
+        scanned += 1;
+        if (scanned >= MAX_SCAN_KEYS) break;
       }
-      if (!res.IsTruncated || items.length >= MAX_LIST) break;
+      if (!res.IsTruncated) {
+        exhausted = true;
+        break;
+      }
       token = res.NextContinuationToken;
-      pages += 1;
     }
-    if (sort === 'name') items.sort((a, b) => a.title.localeCompare(b.title));
-    else if (sort === 'size') items.sort((a, b) => b.sizeBytes - a.sizeBytes);
-    else items.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
-    return NextResponse.json({ items: items.slice(0, MAX_LIST) }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
+
+    async function enrich(rows: Listed[]) {
+      // Small batches to avoid throttling; failures keep filename fallbacks.
+      const out: { key: string; subjectId: string; title: string; originalName: string; date: string; size: string; sizeBytes: number; lastModified: string }[] = [];
+      for (let i = 0; i < rows.length; i += 8) {
+        const batch = await Promise.all(rows.slice(i, i + 8).map(async (row) => {
+          const fileName = row.key.split('/').pop() ?? '';
+          let title = fileName;
+          let originalName = fileName.replace(/^\d+-/, '');
+          try {
+            const head = await s3.send(new HeadObjectCommand({ Bucket: bucketName, Key: row.key }));
+            if (head.Metadata?.title) title = decodeURIComponent(head.Metadata.title);
+            if (head.Metadata?.originalname) originalName = decodeURIComponent(head.Metadata.originalname);
+          } catch {
+            // keep filename fallback
+          }
+          const d = row.lastModified ? new Date(row.lastModified) : null;
+          return {
+            key: row.key, subjectId: row.sid, title, originalName,
+            date: d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '',
+            size: row.sizeBytes < 1024 * 1024 ? `${Math.round(row.sizeBytes / 1024)} KB` : `${(row.sizeBytes / (1024 * 1024)).toFixed(1)} MB`,
+            sizeBytes: row.sizeBytes, lastModified: row.lastModified,
+          };
+        }));
+        out.push(...batch);
+      }
+      return out;
+    }
+
+    if (!q) {
+      // Fast path: order from listing metadata, Head only the visible page.
+      const ordered = [...listed];
+      if (sort === 'name') ordered.sort((a, b) => a.key.localeCompare(b.key));
+      else if (sort === 'size') ordered.sort((a, b) => b.sizeBytes - a.sizeBytes);
+      else ordered.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
+      const total = ordered.length; // exact when `complete` is true (scan finished)
+      const slice = ordered.slice((page - 1) * limit, page * limit);
+      const items = await enrich(slice);
+      if (sort === 'name') items.sort((a, b) => a.title.localeCompare(b.title));
+      return NextResponse.json({ items, total, page, limit, complete: exhausted }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
+    }
+
+    // Search path: titles live in object metadata, so Head a bounded set, then filter.
+    const candidates = listed.slice(0, MAX_SEARCH_HEADS);
+    const enriched = await enrich(candidates);
+    const matched = enriched.filter((it) => {
+      const fileName = it.key.split('/').pop() ?? '';
+      return `${it.title} ${it.originalName} ${fileName} ${it.key}`.toLowerCase().includes(q);
+    });
+    if (sort === 'name') matched.sort((a, b) => a.title.localeCompare(b.title));
+    else if (sort === 'size') matched.sort((a, b) => b.sizeBytes - a.sizeBytes);
+    else matched.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
+    const total = matched.length;
+    const items = matched.slice((page - 1) * limit, page * limit);
+    return NextResponse.json({ items, total, page, limit, complete: exhausted && listed.length <= MAX_SEARCH_HEADS }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
   } catch (e) {
     console.error('Admin files list error:', e);
     return NextResponse.json({ error: 'Failed to list files' }, { status: 500 });

@@ -14,7 +14,7 @@ export function ActivityClient() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/activity?limit=100');
+      const res = await fetch('/api/admin/activity?limit=50');
       if (res.status === 403) throw new Error('Not authorized');
       if (!res.ok) throw new Error('Failed to load activity');
       setItems(((await res.json()) as { items: ActivityItem[] }).items ?? []);
@@ -34,7 +34,10 @@ export function ActivityClient() {
   if (items.length === 0) return <AdminEmpty title="No activity" hint="Admin actions will appear here." />;
 
   return (
-    <div className="divide-y divide-line/70">
+    <div
+      aria-label="Recent activity, newest first"
+      className="max-h-[32rem] min-w-0 divide-y divide-line/70 overflow-y-auto rounded-[1.75rem] bg-sheet px-3 py-1 md:max-h-[36rem]"
+    >
       {items.map((a) => (
         <div key={a.id} className="min-w-0 rounded-2xl px-2 py-4 md:px-4">
           <p className="truncate text-sm font-bold text-ink">{a.action}</p>

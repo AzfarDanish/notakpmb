@@ -14,6 +14,8 @@ type ProgrammeRow = { id: string; code: string; title: string; description: stri
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
+  const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || 30, 1), 30);
+  const page = Math.max(Number(req.nextUrl.searchParams.get('page')) || 1, 1);
   try {
     const { data, error } = await supabaseAdmin()
       .from('programmes')
@@ -34,7 +36,9 @@ export async function GET(req: NextRequest) {
         subjectCount: subs.length, fileCount: files,
       });
     }
-    return NextResponse.json({ programmes: out }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
+    const total = out.length;
+    const programmes = out.slice((page - 1) * limit, page * limit);
+    return NextResponse.json({ programmes, total, page, limit }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
   } catch (e) {
     console.error('Admin programmes list error:', e);
     return NextResponse.json({ error: 'Failed to list programmes' }, { status: 500 });

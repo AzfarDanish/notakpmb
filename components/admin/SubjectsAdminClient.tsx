@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { SearchResultsSkeleton } from '@/components/Skeleton';
 import { AdminEmpty, AdminError } from '@/components/admin/ui';
+import { ADMIN_PAGE_SIZE, Pagination } from '@/components/admin/Pagination';
+import { MoreMenu } from '@/components/MoreMenu';
 import { notifyLiveSync } from '@/hooks/useLiveSync';
 
 type Row = { id: string; title: string; code: string; programmeId: string; programmeTitle: string; fileCount: number; hidden: boolean };
@@ -11,6 +13,8 @@ type Row = { id: string; title: string; code: string; programmeId: string; progr
 export function SubjectsAdminClient() {
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -35,18 +39,20 @@ export function SubjectsAdminClient() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ page: String(page), limit: String(ADMIN_PAGE_SIZE) });
       if (q.trim()) params.set('q', q.trim());
       const res = await fetch(`/api/admin/subjects?${params.toString()}`);
       if (res.status === 403) throw new Error('Not authorized');
       if (!res.ok) throw new Error('Failed to list subjects');
-      setRows(((await res.json()) as { subjects: Row[] }).subjects ?? []);
+      const data = (await res.json()) as { subjects: Row[]; total: number };
+      setRows(data.subjects ?? []);
+      setTotal(Number(data.total ?? 0));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to list subjects');
     } finally {
       setLoading(false);
     }
-  }, [q]);
+  }, [q, page]);
 
   useEffect(() => {
     const t = setTimeout(load, q ? 300 : 0);
@@ -137,11 +143,16 @@ export function SubjectsAdminClient() {
       const res = await fetch(`/api/admin/subjects?id=${encodeURIComponent(deleteTarget.id)}${deleteTarget.fileCount > 0 ? '&force=1' : ''}`, { method: 'DELETE' });
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) throw new Error(data?.error || 'Delete failed');
+      const wasLastOnPage = rows.length === 1 && page > 1;
       setRows((cur) => cur.filter((x) => x.id !== deleteTarget.id));
+      setTotal((t) => Math.max(0, t - 1));
       setDeleteDone(true);
       notifyLiveSync('subjects');
       notifyLiveSync('r2-files');
-      setTimeout(closeDelete, 1200);
+      setTimeout(() => {
+        closeDelete();
+        if (wasLastOnPage) setPage((p) => Math.max(1, p - 1));
+      }, 1200);
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : 'Delete failed.');
     } finally {
@@ -153,7 +164,7 @@ export function SubjectsAdminClient() {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex min-w-0 flex-col gap-2 rounded-[1.75rem] bg-sheet p-3 sm:flex-row md:p-4">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search subjects…" className="min-h-11 w-full flex-1 rounded-2xl border border-line bg-white px-4 py-2 text-sm outline-none focus:border-ink" />
+        <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search subjects…" className="min-h-11 w-full flex-1 rounded-2xl border border-line bg-white px-4 py-2 text-sm outline-none focus:border-ink" />
         <button onClick={() => setShowAdd(true)} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-2 text-sm font-semibold text-paper hover:bg-accent">
           <Plus size={15} /> Add subject
         </button>
@@ -166,24 +177,61 @@ export function SubjectsAdminClient() {
       {!loading && !error && rows.length > 0 && (
         <div className="divide-y divide-line/70">
           {rows.map((r) => (
-            <div key={r.id} className="min-w-0 rounded-2xl px-2 py-4 md:px-4">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-accent">{r.code}</span>
-                {r.hidden && <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-600">Hidden</span>}
-                <span className="ml-auto font-mono text-xs text-muted">{r.fileCount} files</span>
+            <div key={r.id} className="flex min-w-0 items-start gap-2 rounded-2xl px-2 py-4 md:px-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-accent">{r.code}</span>
+                  {r.hidden && <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold text-neutral-600">Hidden</span>}
+                  <span className="ml-auto font-mono text-xs text-muted">{r.fileCount} files</span>
+                </div>
+                <p className="text-dynamic mt-1 truncate text-lg font-black text-ink">{r.title}</p>
+                <p className="mt-1 truncate font-mono text-xs text-muted">{r.id} · {r.programmeTitle}</p>
               </div>
-              <p className="text-dynamic mt-1 truncate text-lg font-black text-ink">{r.title}</p>
-              <p className="mt-1 truncate font-mono text-xs text-muted">{r.id} · {r.programmeTitle}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => { setEditTarget(r); setEditTitle(r.title); setEditCode(r.code); setEditError(''); }} disabled={busyId === r.id} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold hover:bg-sheet disabled:opacity-50"><Pencil size={15} /> Edit</button>
-                <button onClick={() => toggleHide(r)} disabled={busyId === r.id} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold hover:bg-sheet disabled:opacity-50">
-                  {r.hidden ? <Eye size={15} /> : <EyeOff size={15} />} {r.hidden ? 'Unhide' : 'Hide'}
-                </button>
-                <button onClick={() => { setDeleteTarget(r); setDeleteError(''); setDeleteDone(false); setConfirmFiles(false); }} disabled={busyId === r.id} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"><Trash2 size={15} /> Delete</button>
-              </div>
+              <span className="shrink-0">
+                <MoreMenu
+                  label={`Actions for ${r.title}`}
+                  items={[
+                    {
+                      key: 'edit',
+                      label: 'Edit',
+                      icon: <Pencil size={16} strokeWidth={1.5} />,
+                      onClick: () => {
+                        if (busyId === r.id) return;
+                        setEditTarget(r);
+                        setEditTitle(r.title);
+                        setEditCode(r.code);
+                        setEditError('');
+                      },
+                    },
+                    {
+                      key: 'hide',
+                      label: r.hidden ? 'Unhide' : 'Hide',
+                      icon: r.hidden ? <Eye size={16} strokeWidth={1.5} /> : <EyeOff size={16} strokeWidth={1.5} />,
+                      onClick: () => toggleHide(r),
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete',
+                      danger: true,
+                      icon: <Trash2 size={16} strokeWidth={1.5} />,
+                      onClick: () => {
+                        if (busyId === r.id) return;
+                        setDeleteTarget(r);
+                        setDeleteError('');
+                        setDeleteDone(false);
+                        setConfirmFiles(false);
+                      },
+                    },
+                  ]}
+                />
+              </span>
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && !error && (
+        <Pagination page={page} totalPages={Math.ceil(total / ADMIN_PAGE_SIZE)} onChange={setPage} />
       )}
 
       {showAdd && (

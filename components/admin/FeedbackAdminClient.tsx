@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowUp, Check, Loader2, Pin, PinOff, StickyNote, Trash2 } from 'lucide-react';
 import { SearchResultsSkeleton } from '@/components/Skeleton';
 import { AdminEmpty, AdminError } from '@/components/admin/ui';
+import { ADMIN_PAGE_SIZE, Pagination } from '@/components/admin/Pagination';
+import { MoreMenu } from '@/components/MoreMenu';
 import { useRefreshWithTransition } from '@/hooks/useRefreshWithTransition';
 import { notifyLiveSync } from '@/hooks/useLiveSync';
 import type { FeedbackItem, FeedbackStatus } from '@/lib/feedback';
@@ -21,6 +23,8 @@ export function FeedbackAdminClient() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'popular' | 'newest'>('newest');
   const [status, setStatus] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -39,19 +43,20 @@ export function FeedbackAdminClient() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ sort, status });
+      const params = new URLSearchParams({ sort, status, page: String(page), limit: String(ADMIN_PAGE_SIZE) });
       if (q.trim()) params.set('q', q.trim());
       const res = await fetch(`/api/admin/feedback?${params.toString()}`);
       if (res.status === 403) throw new Error('Not authorized');
       if (!res.ok) throw new Error('Failed to load feedback');
-      const data = (await res.json()) as { items: FeedbackItem[] };
+      const data = (await res.json()) as { items: FeedbackItem[]; total: number };
       setItems(data.items ?? []);
+      setTotal(Number(data.total ?? 0));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load feedback');
     } finally {
       setLoading(false);
     }
-  }, [q, sort, status]);
+  }, [q, sort, status, page]);
 
   useEffect(() => {
     const t = setTimeout(load, q ? 250 : 0);
@@ -103,6 +108,7 @@ export function FeedbackAdminClient() {
   }
 
   function openDelete(item: FeedbackItem) {
+    if (busyId) return;
     setDeleteTarget(item);
     setDeleteError('');
     setDeleteDone(false);
@@ -122,10 +128,15 @@ export function FeedbackAdminClient() {
     try {
       const res = await fetch(`/api/admin/feedback?id=${encodeURIComponent(deleteTarget.id)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
+      const wasLastOnPage = items.length === 1 && page > 1;
       setItems((cur) => cur.filter((x) => x.id !== deleteTarget.id));
+      setTotal((t) => Math.max(0, t - 1));
       setDeleteDone(true);
       notifyLiveSync('feedback');
-      setTimeout(closeDelete, 1200);
+      setTimeout(() => {
+        closeDelete();
+        if (wasLastOnPage) setPage((p) => Math.max(1, p - 1));
+      }, 1200);
     } catch {
       setDeleteError('Delete failed. Try again.');
     } finally {
@@ -158,15 +169,15 @@ export function FeedbackAdminClient() {
       <div className="grid min-w-0 grid-cols-1 gap-2 rounded-[1.75rem] bg-sheet p-3 sm:grid-cols-[1fr_auto_auto] md:p-4">
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => { setQ(e.target.value); setPage(1); }}
           placeholder="Search feedback…"
           className="min-h-11 w-full rounded-2xl border border-line bg-white px-4 py-2 text-sm outline-none placeholder:text-muted/60 focus:border-ink"
         />
-        <select value={sort} onChange={(e) => setSort(e.target.value as 'popular' | 'newest')} className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ink" aria-label="Sort">
+        <select value={sort} onChange={(e) => { setSort(e.target.value as 'popular' | 'newest'); setPage(1); }} className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ink" aria-label="Sort">
           <option value="newest">Newest</option>
           <option value="popular">Most upvoted</option>
         </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ink" aria-label="Status">
+        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold outline-none focus:border-ink" aria-label="Status">
           <option value="all">All statuses</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>{LABELS[s]}</option>
@@ -192,32 +203,52 @@ export function FeedbackAdminClient() {
               </div>
               <p className="text-dynamic mt-3 text-base font-semibold leading-6 text-ink">{item.body}</p>
               <p className="mt-1 font-mono text-xs text-muted">{item.id}</p>
-              <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+              <div className="mt-3 flex min-w-0 items-center gap-2">
                 <select
                   value={item.status}
                   disabled={busyId === item.id}
                   onChange={(e) => changeStatus(item, e.target.value as FeedbackStatus)}
-                  className="min-h-11 rounded-2xl border border-line bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-ink disabled:opacity-50"
+                  className="min-h-11 min-w-0 flex-1 rounded-2xl border border-line bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-ink disabled:opacity-50 sm:max-w-52"
                   aria-label={`Status for ${item.id}`}
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>{LABELS[s]}</option>
                   ))}
                 </select>
-                <button onClick={() => togglePin(item)} disabled={busyId === item.id} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-sheet disabled:opacity-50">
-                  {pins.has(item.id) ? <PinOff size={15} /> : <Pin size={15} />}
-                  {pins.has(item.id) ? 'Unpin' : 'Pin'}
-                </button>
-                <button onClick={() => { setNoteTarget(item); setNoteBody(''); setNoteError(''); }} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-sheet">
-                  <StickyNote size={15} /> Note
-                </button>
-                <button onClick={() => openDelete(item)} disabled={busyId === item.id} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50">
-                  <Trash2 size={15} /> Delete
-                </button>
+                <span className="ml-auto shrink-0">
+                  <MoreMenu
+                    label={`Actions for feedback ${item.id}`}
+                    items={[
+                      {
+                        key: 'pin',
+                        label: pins.has(item.id) ? 'Unpin' : 'Pin',
+                        icon: pins.has(item.id) ? <PinOff size={16} strokeWidth={1.5} /> : <Pin size={16} strokeWidth={1.5} />,
+                        onClick: () => togglePin(item),
+                      },
+                      {
+                        key: 'note',
+                        label: 'Private note',
+                        icon: <StickyNote size={16} strokeWidth={1.5} />,
+                        onClick: () => { setNoteTarget(item); setNoteBody(''); setNoteError(''); },
+                      },
+                      {
+                        key: 'delete',
+                        label: 'Delete',
+                        danger: true,
+                        icon: <Trash2 size={16} strokeWidth={1.5} />,
+                        onClick: () => openDelete(item),
+                      },
+                    ]}
+                  />
+                </span>
               </div>
             </article>
           ))}
         </div>
+      )}
+
+      {!loading && !error && (
+        <Pagination page={page} totalPages={Math.ceil(total / ADMIN_PAGE_SIZE)} onChange={setPage} />
       )}
 
       {deleteTarget && (

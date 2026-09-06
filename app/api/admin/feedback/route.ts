@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { logActivity, requireAdmin } from '@/lib/admin';
-import { deleteFeedback, normalizeFeedbackSort, normalizeFeedbackStatus, normalizeStatusFilter, searchFeedbackAdmin, updateFeedbackStatus } from '@/lib/feedback';
+import { countFeedbackAdmin, deleteFeedback, normalizeFeedbackSort, normalizeFeedbackStatus, normalizeStatusFilter, searchFeedbackAdmin, updateFeedbackStatus } from '@/lib/feedback';
 import { recordStatusChange } from '@/lib/admin-data';
 import { supabaseAdmin } from '@/lib/supabase';
 
@@ -11,9 +11,14 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q') ?? '';
   const sort = normalizeFeedbackSort(req.nextUrl.searchParams.get('sort'));
   const status = normalizeStatusFilter(req.nextUrl.searchParams.get('status'));
+  const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || 30, 1), 30);
+  const page = Math.max(Number(req.nextUrl.searchParams.get('page')) || 1, 1);
   try {
-    const items = await searchFeedbackAdmin(q, sort, status, 100);
-    return NextResponse.json({ items }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
+    const [items, total] = await Promise.all([
+      searchFeedbackAdmin(q, sort, status, limit, (page - 1) * limit),
+      countFeedbackAdmin(q, status),
+    ]);
+    return NextResponse.json({ items, total, page, limit }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
   } catch (e) {
     console.error('Admin feedback list error:', e);
     return NextResponse.json({ error: 'Failed to load feedback' }, { status: 500 });

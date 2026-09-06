@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
   const programmeId = req.nextUrl.searchParams.get('programmeId') ?? '';
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim().toLowerCase();
+  const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || 30, 1), 30);
+  const page = Math.max(Number(req.nextUrl.searchParams.get('page')) || 1, 1);
   try {
     const { getProgrammes, getSubjectsForProgramme } = await import('@/lib/subjects');
     const programmes = await getProgrammes();
@@ -28,7 +30,9 @@ export async function GET(req: NextRequest) {
       }
     }
     out.sort((a, b) => a.programmeId.localeCompare(b.programmeId) || a.code.localeCompare(b.code));
-    return NextResponse.json({ subjects: out.slice(0, 200) }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
+    const total = out.length;
+    const subjects = out.slice((page - 1) * limit, page * limit);
+    return NextResponse.json({ subjects, total, page, limit }, { headers: { 'Cache-Control': 'private, max-age=0, must-revalidate' } });
   } catch (e) {
     console.error('Admin subjects list error:', e);
     return NextResponse.json({ error: 'Failed to list subjects' }, { status: 500 });

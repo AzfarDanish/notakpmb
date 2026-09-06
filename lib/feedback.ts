@@ -63,25 +63,39 @@ function mapFeedbackRow(row: FeedbackRow): FeedbackItem {
   };
 }
 
-export async function searchFeedbackAdmin(query: string, sort: FeedbackSort = 'newest', status: FeedbackStatus | 'all' = 'all', limit = 50): Promise<FeedbackItem[]> {
+export async function searchFeedbackAdmin(
+  query: string,
+  sort: FeedbackSort = 'newest',
+  status: FeedbackStatus | 'all' = 'all',
+  limit = 50,
+  offset = 0,
+): Promise<FeedbackItem[]> {
   const q = query.trim();
   const capped = Math.min(Math.max(limit, 1), 100);
-  let builder = supabaseAdmin().from('feedback_items').select('id, body, status, votes_count, created_at, updated_at');
-  if (status === 'new') {
-    builder = builder.in('status', ['new', 'open']);
-  } else if (status !== 'all') {
-    builder = builder.eq('status', status);
-  }
-  if (q) {
-    const like = `%${q}%`;
-    builder = builder.or(`body.ilike.${like},id.ilike.${like}`);
-  }
-  builder = sort === 'newest'
-    ? builder.order('created_at', { ascending: false }).order('votes_count', { ascending: false })
-    : builder.order('votes_count', { ascending: false }).order('created_at', { ascending: false });
-  const { data, error } = await builder.limit(capped);
+  const safeOffset = Math.max(0, offset);
+  const select = supabaseAdmin().from('feedback_items').select('id, body, status, votes_count, created_at, updated_at');
+  const filtered = status === 'new'
+    ? select.in('status', ['new', 'open'])
+    : status === 'all' ? select : select.eq('status', status);
+  const searched = q ? filtered.or(`body.ilike.%${q}%,id.ilike.%${q}%`) : filtered;
+  const ordered = sort === 'newest'
+    ? searched.order('created_at', { ascending: false }).order('votes_count', { ascending: false })
+    : searched.order('votes_count', { ascending: false }).order('created_at', { ascending: false });
+  const { data, error } = await ordered.range(safeOffset, safeOffset + capped - 1);
   if (error) throw error;
   return ((data ?? []) as FeedbackRow[]).map((r) => mapFeedbackRow({ ...r, has_voted: 0 }));
+}
+
+export async function countFeedbackAdmin(query: string, status: FeedbackStatus | 'all' = 'all'): Promise<number> {
+  const q = query.trim();
+  const select = supabaseAdmin().from('feedback_items').select('id', { count: 'exact', head: true });
+  const filtered = status === 'new'
+    ? select.in('status', ['new', 'open'])
+    : status === 'all' ? select : select.eq('status', status);
+  const searched = q ? filtered.or(`body.ilike.%${q}%,id.ilike.%${q}%`) : filtered;
+  const { count, error } = await searched;
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function getFeedbackCounts(): Promise<{ total: number; votes: number }> {
