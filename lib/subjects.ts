@@ -7,15 +7,6 @@ import { unstable_cache } from 'next/cache';
 import { getR2Client } from '@/lib/r2';
 import { dbOr, supabaseAdmin } from '@/lib/supabase';
 
-async function markFilesDeleted(subjectId: string) {
-  // Best-effort file-index cleanup (R2 remains source of truth).
-  try {
-    const { error } = await supabaseAdmin().from('files').delete().eq('subject_id', subjectId);
-    if (error) throw error;
-  } catch {
-    // index cleanup must never break subject deletion
-  }
-}
 import {
   getProgramme as getStaticProgramme,
   getProgrammes as getStaticProgrammes,
@@ -333,10 +324,9 @@ export async function deleteSubject(id: string): Promise<{ deletedFiles: number 
     throw new Error('Subject not found');
   }
 
-  await markFilesDeleted(id);
-
-  let deletedFiles = 0;
-  const { Contents } = await client.send(
+  // R2 objects are deleted by prefix below; R2 is the source of truth, so no
+  // index cleanup is needed.
+  let deletedFiles = 0;  const { Contents } = await client.send(
     new ListObjectsV2Command({ Bucket: bucket, Prefix: `${id}/` }),
   );
   if (Contents && Contents.length > 0) {

@@ -1,0 +1,21 @@
+-- NotaKPMB migration 0004 — remove the Supabase `files` metadata index.
+--
+-- RATIONALE: Cloudflare R2 is the sole source of truth for resource files.
+-- Public listings, counts, search, preview/download, and the admin Files panel
+-- all read directly from R2 (object listing + object metadata). The `files`
+-- table was a best-effort side index (writes were fire-and-forget and reads
+-- were already R2-first), so its rows are redundant copies, not data to keep.
+--
+-- R2 OBJECTS ARE NOT TOUCHED by this migration — only the metadata rows go away.
+--
+-- DEPENDENCIES (verified, none remaining):
+--   * No table holds a foreign key TO files (files only pointed outward to
+--     announcements / announcement_blocks / announcement_submissions).
+--   * No views, triggers, functions, or policies reference files.
+--   * Application code no longer queries the table (all reads/writes moved to R2).
+--
+-- Dropping the table also drops its indexes
+-- (idx_files_subject, idx_files_announcement, idx_files_submission, idx_files_kind),
+-- its foreign keys, and its row-level-security setting.
+
+DROP TABLE IF EXISTS files;

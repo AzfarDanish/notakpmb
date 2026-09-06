@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   try {
     await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: file.type, Metadata: { title: encodeURIComponent(file.name), originalName: encodeURIComponent(file.name) } }));
-    const { error } = await supabaseAdmin().from('files').insert({ key, kind:'announcement', announcement_id: announcementId, block_id: blockId, size:file.size, content_type:file.type, title:file.name, original_name:file.name });
-    if (error) { await client.send(new DeleteObjectCommand({ Bucket:bucket, Key:key })); throw error; }
+    // No Supabase files-table row: R2 is the source of truth and the key is
+    // persisted into the block data below, which is the real record.
     // Persist the new key into the block immediately so re-opening the editor
     // cannot lose an upload that succeeded before the local form was saved.
     const blockData = ((await supabaseAdmin().from('announcement_blocks').select('data').eq('id', blockId).limit(1).maybeSingle()).data?.data ?? {}) as Record<string, unknown>;
@@ -44,18 +44,26 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const denied=await requireAdmin(req); if(denied)return denied;
   const key=req.nextUrl.searchParams.get('key'); if(!key?.startsWith('announcements/'))return NextResponse.json({error:'Invalid key'},{status:400});
+  const parts=key.split('/'); if(parts.length<4||parts.some((p)=>!p||p==='..'))return NextResponse.json({error:'Invalid key'},{status:400});
+  const announcementId=parts[1], blockId=parts[2];
+  const { data: block } = await supabaseAdmin().from('announcement_blocks').select('id,announcement_id,type,data').eq('id', blockId).eq('announcement_id', announcementId).limit(1).maybeSingle();
+  if (!block) return NextResponse.json({error:'File not found'},{status:404});
+  const current = ((block as { data?: unknown }).data ?? {}) as Record<string, unknown>;
+  const referenced = block.type === 'image'
+    ? current.key === key
+    : Array.isArray(current.files) && (current.files as { key?: unknown }[]).some((f) => f?.key === key);
+  if (!referenced) return NextResponse.json({error:'File not found'},{status:404});
   const client=getR2Client(); const bucket=process.env.R2_BUCKET_NAME; if(!client||!bucket)return NextResponse.json({error:'R2 not configured'},{status:503});
-  const { data: row }=await supabaseAdmin().from('files').select('announcement_id').eq('key',key).eq('kind','announcement').limit(1).maybeSingle();
-  if(!row)return NextResponse.json({error:'File not found'},{status:404});
-  await client.send(new DeleteObjectCommand({Bucket:bucket,Key:key})); await supabaseAdmin().from('files').delete().eq('key',key);
-  const { data: block } = await supabaseAdmin().from('announcement_blocks').select('id,type,data').eq('id', key.split('/')[2] ?? '').limit(1).maybeSingle();
-  if (block) {
-    const current = (block.data ?? {}) as Record<string, unknown>;
-    const next = block.type === 'image'
+  // Best-effort R2 delete: a missing object still counts as deleted (idempotent).
+  await client.send(new DeleteObjectCommand({Bucket:bucket,Key:key})).catch(()=>undefined);
+  const b = block as { id: string; type: string; data?: unknown };
+  {
+    const current = (b.data ?? {}) as Record<string, unknown>;
+    const next = b.type === 'image'
       ? { ...current, key: '' }
       : { ...current, files: (Array.isArray(current.files) ? current.files : []).filter((f) => String((f as { key?: unknown }).key) !== key) };
-    await supabaseAdmin().from('announcement_blocks').update({ data: next, updated_at: new Date().toISOString() }).eq('id', block.id);
+    await supabaseAdmin().from('announcement_blocks').update({ data: next, updated_at: new Date().toISOString() }).eq('id', b.id);
   }
-  await logActivity('announcement.file.removed','announcement',String(row.announcement_id),key); revalidateTag('announcements','max');
+  await logActivity('announcement.file.removed','announcement',announcementId,key); revalidateTag('announcements','max');
   return NextResponse.json({success:true});
 }

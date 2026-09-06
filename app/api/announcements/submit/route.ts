@@ -33,7 +33,8 @@ export async function POST(req:NextRequest){
   try{
     for(const file of files){const key=`submissions/${ann.id}/${block.id}/${submissionId}/${Date.now()}-${safeName(file.name)}`;await client.send(new PutObjectCommand({Bucket:bucket,Key:key,Body:Buffer.from(await file.arrayBuffer()),ContentType:file.type,Metadata:{originalName:encodeURIComponent(file.name)}}));uploaded.push({key,file});}
     const {error}=await supabaseAdmin().from('announcement_submissions').insert({id:submissionId,announcement_id:ann.id,block_id:block.id,uploader_hash:uploaderHash,message,file_count:files.length});if(error)throw error;
-    const {error:fileErr}=await supabaseAdmin().from('files').insert(uploaded.map(({key,file})=>({key,kind:'submission',announcement_id:ann.id,block_id:block.id,submission_id:submissionId,size:file.size,content_type:file.type,title:file.name,original_name:file.name})));if(fileErr)throw fileErr;
+    // No Supabase files-table row: R2 is the source of truth; the submissions
+    // panel discovers objects via the submissions/{ann}/{block}/{submission}/ prefix.
     await logActivity('public_submission.received','announcement',ann.id,`${block.id}:${submissionId}`);
     const res=NextResponse.json({success:true,submissionId},{status:201});res.cookies.set(COOKIE,raw,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:31536000});return res;
   }catch(e){if(uploaded.length)await client.send(new DeleteObjectsCommand({Bucket:bucket,Delete:{Objects:uploaded.map((u)=>({Key:u.key}))}})).catch(()=>undefined);await supabaseAdmin().from('announcement_submissions').delete().eq('id',submissionId);return NextResponse.json({error:e instanceof Error?e.message:'Submission failed'},{status:500});}

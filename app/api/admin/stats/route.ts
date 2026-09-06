@@ -4,7 +4,6 @@ import { getProgrammes, getSubjectsForProgramme } from '@/lib/subjects';
 import { getAllFileCounts } from '@/lib/r2';
 import { getFeedbackCounts, listFeedback } from '@/lib/feedback';
 import { listActivity } from '@/lib/admin';
-import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req);
@@ -31,14 +30,27 @@ export async function GET(req: NextRequest) {
     ]);
     let recentUploads: { key: string; subjectId: string }[] = [];
     try {
-      const { data, error } = await supabaseAdmin()
-        .from('files')
-        .select('key, subject_id')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      recentUploads = ((data ?? []) as { key: string; subject_id: string }[]).map((r) => ({ key: String(r.key ?? ''), subjectId: String(r.subject_id ?? '') }));
+      // R2 is the source of truth: derive recent uploads from object listing.
+      const { getR2Client } = await import('@/lib/r2');
+      const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+      const r2 = getR2Client();
+      const bucket = process.env.R2_BUCKET_NAME;
+      if (r2 && bucket) {
+        const seen: { key: string; subjectId: string; at: string }[] = [];
+        let token: string | undefined;
+        for (let pages = 0; pages < 5; pages += 1) {
+          const res = await r2.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token, MaxKeys: 200 }));
+          for (const obj of res.Contents ?? []) {
+            if (!obj.Key) continue;
+            const sid = obj.Key.split('/')[0] ?? '';
+            if (!sid || sid.startsWith('_') || sid === 'announcements' || sid === 'submissions') continue;
+            seen.push({ key: obj.Key, subjectId: sid, at: obj.LastModified ? obj.LastModified.toISOString() : '' });
+          }
+          if (!res.IsTruncated) break;
+          token = res.NextContinuationToken;
+        }
+        recentUploads = seen.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 5).map(({ key, subjectId }) => ({ key, subjectId }));
+      }
     } catch {
       recentUploads = [];
     }

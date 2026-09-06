@@ -53,20 +53,8 @@ export async function POST(req: NextRequest) {
       }
     }));
 
-    // Best-effort file index (Supabase metadata; R2 remains source of truth).
-    // Never fails the upload: a missing index row is backfilled by the admin files list.
-    try {
-      const { supabaseAdmin } = await import('@/lib/supabase');
-      await supabaseAdmin().from('files').upsert({
-        key,
-        subject_id: subjectId,
-        size: buffer.length,
-        content_type: file.type || 'application/octet-stream',
-        title: cleanTitle,
-      }, { onConflict: 'key' });
-    } catch {
-      // index write failed; upload itself succeeded
-    }
+    // R2 is the source of truth: no Supabase files-table row. The subject
+    // page discovers this object by listing the subject's R2 prefix.
 
     try {
       const { logActivity } = await import('@/lib/admin');

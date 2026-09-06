@@ -3,7 +3,6 @@ import { revalidateTag } from 'next/cache';
 import { CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getR2Client } from '@/lib/r2';
 import { logActivity, requireAdmin } from '@/lib/admin';
-import { supabaseAdmin } from '@/lib/supabase';
 
 const MAX_LIST = 30;
 // Safety caps so a huge bucket can never force an unbounded scan.
@@ -153,7 +152,6 @@ export async function PATCH(req: NextRequest) {
       ContentType: contentType, MetadataDirective: 'REPLACE',
       Metadata: { title: encodeURIComponent(title), originalname: originalName },
     }));
-    await supabaseAdmin().from('files').upsert({ key, subject_id: key.split('/')[0] ?? '', title }, { onConflict: 'key' }).then(() => undefined, () => undefined);
     await logActivity('file.metadata', 'file', key, title);
     revalidateTag('r2-files', 'max');
     return NextResponse.json({ success: true });
@@ -172,8 +170,8 @@ export async function DELETE(req: NextRequest) {
   const bucket = process.env.R2_BUCKET_NAME;
   if (!client || !bucket) return NextResponse.json({ error: 'R2 not configured' }, { status: 500 });
   try {
+    // DeleteObject is idempotent: a missing key still counts as deleted.
     await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
-    await supabaseAdmin().from('files').upsert({ key, subject_id: key.split('/')[0] ?? '', deleted_at: new Date().toISOString() }, { onConflict: 'key' }).then(() => undefined, () => undefined);
     await logActivity('file.deleted', 'file', key, '');
     revalidateTag('r2-files', 'max');
     return NextResponse.json({ success: true });

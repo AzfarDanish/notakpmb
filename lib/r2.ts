@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, HeadObjectCommand, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 
@@ -218,4 +218,63 @@ function isR2AccessDenied(e: unknown): boolean {
     return meta?.httpStatusCode === 403;
   }
   return false;
+}
+
+export type R2ListedObject = { key: string; size: number; lastModified: string };
+
+/** List object keys under a prefix. R2 is the source of truth for file existence. */
+export async function listR2Keys(prefix: string): Promise<R2ListedObject[]> {
+  const client = getR2Client();
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!client || !bucket || !prefix || prefix.includes('..')) return [];
+  const out: R2ListedObject[] = [];
+  let token: string | undefined;
+  try {
+    for (;;) {
+      const res = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token, MaxKeys: 500 }));
+      for (const obj of res.Contents ?? []) {
+        if (!obj.Key) continue;
+        out.push({ key: obj.Key, size: obj.Size ?? 0, lastModified: obj.LastModified ? obj.LastModified.toISOString() : '' });
+      }
+      if (!res.IsTruncated) break;
+      token = res.NextContinuationToken;
+    }
+  } catch {
+    return [];
+  }
+  return out;
+}
+
+/** Delete objects by key. Missing keys are ignored (S3 delete is idempotent). */
+export async function deleteR2Keys(keys: string[]): Promise<void> {
+  const client = getR2Client();
+  const bucket = process.env.R2_BUCKET_NAME;
+  const unique = [...new Set(keys.filter((k) => typeof k === 'string' && k && !k.includes('..')))];
+  if (!client || !bucket || unique.length === 0) return;
+  for (let i = 0; i < unique.length; i += 500) {
+    await client.send(new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: { Objects: unique.slice(i, i + 500).map((Key) => ({ Key })) },
+    })).catch(() => undefined);
+  }
+}
+
+export type R2HeadMeta = { originalName: string; contentType: string; size: number } | null;
+
+/** Read filename/content-type stored in object metadata. Null when the object is gone. */
+export async function headR2Meta(key: string): Promise<R2HeadMeta> {
+  const client = getR2Client();
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!client || !bucket || !key || key.includes('..')) return null;
+  try {
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    const fallback = key.split('/').pop()?.replace(/^\d+-/, '') || 'file';
+    return {
+      originalName: head.Metadata?.originalname ? decodeURIComponent(head.Metadata.originalname) : fallback,
+      contentType: head.ContentType ?? 'application/octet-stream',
+      size: head.ContentLength ?? 0,
+    };
+  } catch {
+    return null;
+  }
 }

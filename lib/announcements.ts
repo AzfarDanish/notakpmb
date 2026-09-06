@@ -289,14 +289,25 @@ export async function reorderBlocks(announcementId: string, ids: string[]) {
 
 export async function deleteBlock(id: string) {
   const sb = supabaseAdmin();
-  const { data: files } = await sb.from('files').select('key').eq('block_id', id).is('deleted_at', null);
-  if (files?.length) {
-    const { getR2Client } = await import('@/lib/r2');
-    const client = getR2Client(); const bucket = process.env.R2_BUCKET_NAME;
-    if (client && bucket) {
-      const { DeleteObjectsCommand } = await import('@aws-sdk/client-s3');
-      await client.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: files.map((f) => ({ Key: String(f.key) })) } }));
+  const { data: block } = await sb.from('announcement_blocks').select('id,announcement_id,type,data').eq('id', id).limit(1).maybeSingle();
+  const keys = new Set<string>();
+  const data = ((block as { data?: unknown } | null)?.data ?? {}) as Record<string, unknown>;
+  const dataKey = typeof data.key === 'string' && data.key ? data.key : '';
+  if (dataKey) keys.add(dataKey);
+  if (Array.isArray(data.files)) {
+    for (const f of data.files) {
+      const k = (f as { key?: unknown } | null)?.key;
+      if (typeof k === 'string' && k) keys.add(k);
     }
+  }
+  const announcementId = String((block as { announcement_id?: unknown } | null)?.announcement_id ?? '');
+  if (announcementId) {
+    // Catch any orphaned objects (e.g. replaced images, submission uploads).
+    const { listR2Keys, deleteR2Keys } = await import('@/lib/r2');
+    for (const prefix of [`announcements/${announcementId}/${id}/`, `submissions/${announcementId}/${id}/`]) {
+      for (const obj of await listR2Keys(prefix)) keys.add(obj.key);
+    }
+    await deleteR2Keys([...keys]);
   }
   const { error } = await sb.from('announcement_blocks').delete().eq('id', id);
   if (error) throw error;
@@ -311,10 +322,25 @@ export async function getSubmissionGroups(announcementId: string) {
     if (error) throw error;
     const mapped: AnnouncementSubmission[] = [];
     for (const row of submissions ?? []) {
-      const { data: files } = await supabaseAdmin().from('files').select('*').eq('submission_id', row.id).is('deleted_at', null).order('created_at');
+      // Submission files are discovered from R2 (source of truth), not a DB index.
+      const { listR2Keys, headR2Meta } = await import('@/lib/r2');
+      const prefix = `submissions/${row.announcement_id}/${row.block_id}/${row.id}/`;
+      const objects = (await listR2Keys(prefix)).sort((a, b) => b.lastModified.localeCompare(a.lastModified));
+      const files: AnnouncementFile[] = [];
+      for (const obj of objects) {
+        const meta = await headR2Meta(obj.key);
+        if (!meta) continue; // listed but already gone; skip
+        const name = meta.originalName;
+        files.push({
+          key: obj.key, kind: 'submission',
+          announcementId: String(row.announcement_id), blockId: String(row.block_id), submissionId: String(row.id),
+          title: name, originalName: name, size: meta.size || obj.size,
+          contentType: meta.contentType, createdAt: obj.lastModified,
+        });
+      }
       mapped.push({
         id: String(row.id), announcementId: String(row.announcement_id), blockId: String(row.block_id), uploaderHash: String(row.uploader_hash), message: String(row.message ?? ''), fileCount: Number(row.file_count ?? 0), createdAt: String(row.created_at),
-        files: (files ?? []).map((f) => ({ key: String(f.key), kind: 'submission', announcementId: f.announcement_id ? String(f.announcement_id) : null, blockId: f.block_id ? String(f.block_id) : null, submissionId: f.submission_id ? String(f.submission_id) : null, title: String(f.title ?? ''), originalName: String(f.original_name ?? ''), size: Number(f.size ?? 0), contentType: String(f.content_type ?? ''), createdAt: String(f.created_at ?? '') })),
+        files,
       });
     }
     groups.push({ blockId: String(block.id), title: String((block.data as Record<string, unknown>)?.title ?? 'Upload request'), submissions: mapped });

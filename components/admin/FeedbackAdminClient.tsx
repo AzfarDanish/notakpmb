@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowUp, Check, Loader2, Pin, PinOff, StickyNote, Trash2 } from 'lucide-react';
+import { ArrowUp, Check, Loader2, Trash2 } from 'lucide-react';
 import { SearchResultsSkeleton } from '@/components/Skeleton';
 import { AdminEmpty, AdminError } from '@/components/admin/ui';
 import { ADMIN_PAGE_SIZE, Pagination } from '@/components/admin/Pagination';
@@ -12,22 +12,16 @@ import type { FeedbackItem } from '@/lib/feedback';
 
 export function FeedbackAdminClient() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [pins, setPins] = useState<Set<string>>(new Set());
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'popular' | 'newest'>('newest');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FeedbackItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [deleteDone, setDeleteDone] = useState(false);
-  const [noteTarget, setNoteTarget] = useState<FeedbackItem | null>(null);
-  const [noteBody, setNoteBody] = useState('');
-  const [noteBusy, setNoteBusy] = useState(false);
-  const [noteError, setNoteError] = useState('');
   const { refresh } = useRefreshWithTransition();
   void refresh;
 
@@ -55,32 +49,7 @@ export function FeedbackAdminClient() {
     return () => clearTimeout(t);
   }, [load, q]);
 
-  async function togglePin(item: FeedbackItem) {
-    if (busyId) return;
-    setBusyId(item.id);
-    try {
-      const pinned = !pins.has(item.id);
-      const res = await fetch('/api/admin/pins', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entityType: 'feedback', entityId: item.id, pinned }),
-      });
-      if (!res.ok) throw new Error('Pin failed');
-      setPins((prev) => {
-        const next = new Set(prev);
-        if (pinned) next.add(item.id);
-        else next.delete(item.id);
-        return next;
-      });
-    } catch {
-      setError('Pin failed. Try again.');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   function openDelete(item: FeedbackItem) {
-    if (busyId) return;
     setDeleteTarget(item);
     setDeleteError('');
     setDeleteDone(false);
@@ -116,26 +85,6 @@ export function FeedbackAdminClient() {
     }
   }
 
-  async function saveNote() {
-    if (!noteTarget || noteBusy || !noteBody.trim()) return;
-    setNoteBusy(true);
-    setNoteError('');
-    try {
-      const res = await fetch('/api/admin/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entityType: 'feedback', entityId: noteTarget.id, body: noteBody }),
-      });
-      if (!res.ok) throw new Error('Note failed');
-      setNoteBody('');
-      setNoteTarget(null);
-    } catch {
-      setNoteError('Could not save note.');
-    } finally {
-      setNoteBusy(false);
-    }
-  }
-
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="grid min-w-0 grid-cols-1 gap-2 rounded-[1.75rem] bg-sheet p-3 sm:grid-cols-[1fr_auto] md:p-4">
@@ -163,7 +112,6 @@ export function FeedbackAdminClient() {
                 <span className="inline-flex items-center gap-1 rounded-2xl border border-line bg-white px-3 py-1.5 text-sm font-black tabular-nums">
                   <ArrowUp size={14} /> {item.votesCount}
                 </span>
-                {pins.has(item.id) && <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-xs font-bold text-paper"><Pin size={12} /> Pinned</span>}
                 <span className="ml-auto font-mono text-xs text-muted">{new Date(item.createdAt).toLocaleString()}</span>
               </div>
               <p className="text-dynamic mt-3 text-base font-semibold leading-6 text-ink">{item.body}</p>
@@ -173,18 +121,6 @@ export function FeedbackAdminClient() {
                   <MoreMenu
                     label={`Actions for feedback ${item.id}`}
                     items={[
-                      {
-                        key: 'pin',
-                        label: pins.has(item.id) ? 'Unpin' : 'Pin',
-                        icon: pins.has(item.id) ? <PinOff size={16} strokeWidth={1.5} /> : <Pin size={16} strokeWidth={1.5} />,
-                        onClick: () => togglePin(item),
-                      },
-                      {
-                        key: 'note',
-                        label: 'Private note',
-                        icon: <StickyNote size={16} strokeWidth={1.5} />,
-                        onClick: () => { setNoteTarget(item); setNoteBody(''); setNoteError(''); },
-                      },
                       {
                         key: 'delete',
                         label: 'Delete',
@@ -226,23 +162,6 @@ export function FeedbackAdminClient() {
                 </div>
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {noteTarget && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm" onClick={() => !noteBusy && setNoteTarget(null)}>
-          <div className="w-full max-w-[400px] rounded-[2rem] border border-line bg-white p-5" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <h3 className="text-xl font-black tracking-tight text-ink">Private note</h3>
-            <p className="mt-1 font-mono text-xs text-muted">{noteTarget.id} · never shown publicly</p>
-            <textarea value={noteBody} onChange={(e) => setNoteBody(e.target.value.slice(0, 2000))} rows={4} placeholder="Context for future you…" className="mt-3 min-h-28 w-full resize-none rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-ink" />
-            {noteError && <p className="mt-2 text-sm text-red-600">{noteError}</p>}
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setNoteTarget(null)} disabled={noteBusy} className="px-5 py-2.5 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">Cancel</button>
-              <button onClick={saveNote} disabled={noteBusy || !noteBody.trim()} className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-2.5 text-sm font-semibold text-paper hover:bg-accent disabled:opacity-40">
-                {noteBusy && <Loader2 size={14} className="animate-spin" />} Save note
-              </button>
-            </div>
           </div>
         </div>
       )}

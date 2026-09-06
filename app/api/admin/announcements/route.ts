@@ -58,13 +58,14 @@ export async function DELETE(req: NextRequest) {
   if ((count ?? 0) > 0 && !force) return NextResponse.json({ error: `Announcement has ${count} submission(s). Confirm deletion.`, needsConfirm: true, submissionCount: count }, { status: 409 });
   const item = await getAnnouncement(id);
   if (!item) return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
-  const { data: files } = await supabaseAdmin().from('files').select('key').eq('announcement_id', id).is('deleted_at', null);
-  const { getR2Client } = await import('@/lib/r2');
-  const client = getR2Client(); const bucket = process.env.R2_BUCKET_NAME;
-  if (client && bucket && files?.length) {
-    const { DeleteObjectsCommand } = await import('@aws-sdk/client-s3');
-    await client.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: files.map((f) => ({ Key: String(f.key) })) } }));
+  // R2 is the source of truth: remove block assets and any public-submission
+  // objects under this announcement. DB rows cascade via foreign keys.
+  const { listR2Keys, deleteR2Keys } = await import('@/lib/r2');
+  const keys = new Set<string>();
+  for (const prefix of [`announcements/${id}/`, `submissions/${id}/`]) {
+    for (const obj of await listR2Keys(prefix)) keys.add(obj.key);
   }
+  await deleteR2Keys([...keys]);
   const { error } = await supabaseAdmin().from('announcements').delete().eq('id', id); if (error) throw error;
   await logActivity('announcement.deleted', 'announcement', id, item.title);
   revalidateTag('announcements', 'max'); revalidateTag('r2-files', 'max');

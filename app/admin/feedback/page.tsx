@@ -10,7 +10,7 @@ export default async function AdminFeedbackPage() {
       <section className="min-w-0">
         <p className="text-sm font-bold text-accent">Moderation</p>
         <h1 className="mt-2 text-4xl font-black tracking-tight text-ink">Feedback</h1>
-        <p className="mt-3 max-w-md text-sm leading-6 text-muted">Search, pin, note, and delete. Notes and pins stay private.</p>
+        <p className="mt-3 max-w-md text-sm leading-6 text-muted">Search and delete feedback.</p>
       </section>
       <FeedbackAdminClient />
     </div>
