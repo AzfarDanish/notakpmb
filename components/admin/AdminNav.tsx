@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Activity, BarChart3, Files, FolderOpen, HeartHandshake, LogOut, Menu, Search, Settings2, X } from 'lucide-react';
+import { Activity, BarChart3, Files, FolderOpen, HeartHandshake, LogOut, Menu, Settings2, X } from 'lucide-react';
 
 const LINKS = [
   { href: '/admin', label: 'Dashboard', icon: BarChart3, exact: true },
@@ -12,7 +12,6 @@ const LINKS = [
   { href: '/admin/subjects', label: 'Subjects', icon: FolderOpen },
   { href: '/admin/programmes', label: 'Programmes', icon: Settings2 },
   { href: '/admin/activity', label: 'Activity', icon: Activity },
-  { href: '/admin/health', label: 'Health', icon: Search },
 ];
 
 export function AdminNav() {

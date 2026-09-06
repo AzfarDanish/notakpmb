@@ -14,14 +14,24 @@ type Stats = {
   recentUploads: { key: string; subjectId: string }[];
 };
 
+type Check = { ok: boolean; latencyMs: number; detail: string };
+
+type Health = {
+  app: Check; database: Check; storage: Check; processing: Check;
+  recentFailures: { id: string; action: string; meta: string; createdAt: string }[];
+};
+
 export function DashboardClient() {
   const [data, setData] = useState<Stats | null>(null);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [healthError, setHealthError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    setHealthError('');
     try {
       const res = await fetch('/api/admin/stats');
       if (res.status === 403) throw new Error('Not authorized');
@@ -32,6 +42,13 @@ export function DashboardClient() {
     } finally {
       setLoading(false);
     }
+    try {
+      const res = await fetch('/api/admin/health');
+      if (!res.ok) throw new Error('Health check failed');
+      setHealth((await res.json()) as Health);
+    } catch (e) {
+      setHealthError(e instanceof Error ? e.message : 'Health check failed');
+    }
   }, []);
 
   useEffect(() => {
@@ -41,6 +58,15 @@ export function DashboardClient() {
   if (loading) return <StatsSkeleton />;
   if (error) return <AdminError message={error} onRetry={load} />;
   if (!data) return <AdminEmpty title="No data" hint="Stats are unavailable right now." />;
+
+  const checks: [string, Check][] = health
+    ? [
+        ['Application / API', health.app],
+        ['Database', health.database],
+        ['Storage (R2)', health.storage],
+        ['Processing', health.processing],
+      ]
+    : [];
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
@@ -101,6 +127,47 @@ export function DashboardClient() {
           </div>
         </section>
       </div>
+
+      <section aria-label="System health" className="min-w-0 rounded-[1.75rem] bg-sheet p-4 md:p-5">
+        <h2 className="text-xl font-black tracking-tight text-ink">System Health</h2>
+        {healthError && !health && (
+          <p className="mt-3 text-sm text-muted">Health status unavailable: {healthError}</p>
+        )}
+        {health && (
+          <>
+            <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {checks.map(([label, c]) => (
+                <div key={label} className="min-w-0 rounded-2xl bg-white px-4 py-3">
+                  <p className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-bold ${c.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${c.ok ? 'bg-green-600' : 'bg-red-600'}`} />
+                    {c.ok ? 'Healthy' : 'Down'}
+                  </p>
+                  <p className="mt-2 truncate text-sm font-bold text-ink">{label}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted">{c.detail} · {c.latencyMs}ms</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 rounded-2xl bg-white px-4 py-3">
+              <p className="text-sm font-bold text-ink">
+                Recent failures{' '}
+                <span className="tabular-nums text-muted">{health.recentFailures.length}</span>
+              </p>
+              {health.recentFailures.length === 0 ? (
+                <p className="mt-1 text-xs text-muted">No failures recorded.</p>
+              ) : (
+                <div className="mt-1 divide-y divide-line/60">
+                  {health.recentFailures.slice(0, 3).map((f) => (
+                    <div key={f.id} className="min-w-0 py-2">
+                      <p className="truncate font-mono text-xs font-bold text-ink">{f.action}</p>
+                      <p className="truncate text-xs text-muted">{f.meta}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
