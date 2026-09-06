@@ -27,6 +27,9 @@ export async function GET(req: NextRequest) {
   const filename = rawFilename.replace(/["\r\n]/g, '_').slice(0, 200) || 'download';
 
   if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 });
+  if (key.startsWith('submissions/') || key.startsWith('_') || key.includes('..')) {
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  }
 
   const client = getR2Client();
   if (!client || !process.env.R2_BUCKET_NAME) {

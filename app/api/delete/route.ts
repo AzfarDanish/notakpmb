@@ -7,6 +7,9 @@ export async function DELETE(req: NextRequest) {
   const key = req.nextUrl.searchParams.get('key');
 
   if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 });
+  if (key.startsWith('announcements/') || key.startsWith('submissions/') || key.startsWith('_') || key.includes('..')) {
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  }
 
   const client = getR2Client();
   if (!client || !process.env.R2_BUCKET_NAME) {

@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Activity, BarChart3, Files, FolderOpen, HeartHandshake, LogOut, Menu, Settings2, X } from 'lucide-react';
+import { Activity, BarChart3, Files, FolderOpen, HeartHandshake, LogOut, Megaphone, Menu, Settings2, X } from 'lucide-react';
 
 const LINKS = [
   { href: '/admin', label: 'Dashboard', icon: BarChart3, exact: true },
   { href: '/admin/feedback', label: 'Feedback', icon: HeartHandshake },
+  { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
   { href: '/admin/files', label: 'Files', icon: Files },
   { href: '/admin/subjects', label: 'Subjects', icon: FolderOpen },
   { href: '/admin/programmes', label: 'Programmes', icon: Settings2 },

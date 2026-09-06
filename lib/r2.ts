@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 
 const R2_CACHE_SECONDS = 60;
 const HEAD_BATCH_SIZE = 8;
+const RESERVED_PREFIXES = new Set(['announcements', 'submissions']);
 let r2Client: S3Client | null | undefined;
 
 export const isR2Configured = () => {
@@ -51,7 +52,7 @@ async function readAllFileCounts(): Promise<Record<string, number>> {
       for (const item of Contents) {
         if (!item.Key) continue;
         const subjectId = item.Key.split('/')[0];
-        if (subjectId && !subjectId.startsWith('_')) {
+        if (subjectId && !subjectId.startsWith('_') && !RESERVED_PREFIXES.has(subjectId)) {
           counts[subjectId] = (counts[subjectId] || 0) + 1;
         }
       }
@@ -105,7 +106,7 @@ export async function searchFiles(query: string): Promise<FileSearchResult[]> {
     for (const item of Contents) {
       if (!item.Key) continue;
       const subjectId = item.Key.split('/')[0];
-      if (!subjectId || subjectId.startsWith('_')) continue;
+      if (!subjectId || subjectId.startsWith('_') || RESERVED_PREFIXES.has(subjectId)) continue;
 
       const fileName = item.Key.split('/').pop() || '';
       const head = await client.send(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logActivity, requireAdmin } from '@/lib/admin';
 import { deleteAdminNote, listAdminNotes, upsertAdminNote } from '@/lib/admin-data';
 
-const ALLOWED = new Set(['feedback', 'file', 'subject', 'programme']);
+const ALLOWED = new Set(['feedback', 'file', 'subject', 'programme', 'announcement']);
 
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin(req);

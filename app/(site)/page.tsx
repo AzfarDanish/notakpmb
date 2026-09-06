@@ -5,6 +5,7 @@ import { getAllFileCounts } from '@/lib/r2';
 import { getProgrammes } from '@/lib/subjects';
 import { CourseLookup } from '@/components/CourseLookup';
 import { ProgrammeListSkeleton } from '@/components/Skeleton';
+import { AnnouncementSection } from '@/components/announcements/AnnouncementSection';
 
 async function ProgrammesPanel() {
   const [programmes, fileCounts] = await Promise.all([
@@ -78,6 +79,9 @@ export default function Home() {
               </Link>
             </div>
           </div>
+          <Suspense fallback={null}>
+            <AnnouncementSection />
+          </Suspense>
         </section>
 
         <Suspense fallback={<section className="min-w-0 xl:pt-8"><ProgrammeListSkeleton /></section>}>

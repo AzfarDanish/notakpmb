@@ -3,7 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { logActivity, requireAdmin } from '@/lib/admin';
 import { setPinned } from '@/lib/admin-data';
 
-const ALLOWED = new Set(['feedback', 'file', 'subject', 'programme']);
+const ALLOWED = new Set(['feedback', 'file', 'subject', 'programme', 'announcement']);
 
 export async function POST(req: NextRequest) {
   const denied = await requireAdmin(req);

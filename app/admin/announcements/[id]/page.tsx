@@ -1,0 +1,2 @@
+import { redirect,notFound } from 'next/navigation';import { getAdminFromCookies } from '@/lib/admin';import { getAnnouncement } from '@/lib/announcements';import { AnnouncementEditor } from '@/components/admin/AnnouncementEditor';
+export default async function AnnouncementEditPage({params}:{params:Promise<{id:string}>}){if(!await getAdminFromCookies())redirect('/admin/login');const{id}=await params;const item=await getAnnouncement(id);if(!item)notFound();return <AnnouncementEditor initial={item}/>}
