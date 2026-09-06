@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Trash2, Loader2, Eye, Download, Check } from 'lucide-react';
+import { X, Trash2, Loader2, Eye, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { MoreMenu } from '@/components/MoreMenu';
@@ -55,7 +55,6 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
   const [deleteItem, setDeleteItem] = useState<{key: string, title: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
   const { refresh, isPending } = useRefreshWithTransition();
 
   const isDeleteActive = Boolean(deleteItem);
@@ -67,11 +66,10 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
     setDeleteItem(null);
     setIsDeleting(false);
     setDeleteError(null);
-    setDeleteSuccess(false);
   };
 
   const handleDelete = async () => {
-    if (!deleteItem || isDeleting || deleteSuccess) return;
+    if (!deleteItem || isDeleting) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
@@ -79,12 +77,9 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
         method: 'DELETE',
       });
       if (res.ok) {
-        setDeleteSuccess(true);
         notifyLiveSync('r2-files');
         refresh();
-        setTimeout(() => {
-          closeDelete();
-        }, 1500);
+        closeDelete();
       } else {
         const data = await res.json().catch(() => null);
         setDeleteError(data?.error || 'Failed to delete file');
@@ -256,7 +251,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => { if (!isDeleting && !deleteSuccess) closeDelete(); }}
+              onClick={() => { if (!isDeleting) closeDelete(); }}
               className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/10 p-4 backdrop-blur-sm sm:p-6"
             >
               <motion.div
@@ -270,19 +265,7 @@ export function DocumentSection({ title, items, scrollable = false }: { title: s
                 className="relative z-[110] w-full max-w-[360px] rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)]"
               >
                 <div className="p-5 sm:p-6">
-                  {deleteSuccess ? (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100">
-                          <Check size={18} strokeWidth={2} className="text-green-700" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-base font-bold text-ink">Deleted</p>
-                          <p className="mt-0.5 text-sm text-muted truncate">{deleteItem.title}</p>
-                        </div>
-                      </div>
-                    </>
-                  ) : deleteError ? (
+                  {deleteError ? (
                     <>
                       <h3 className="mb-1 text-xl font-black tracking-tight text-ink">Delete document</h3>
                       <p className="mb-2 text-sm text-red-500">{deleteError}</p>

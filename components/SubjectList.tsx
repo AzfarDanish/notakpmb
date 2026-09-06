@@ -183,7 +183,7 @@ function ModalCard({
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          className="relative z-[110] flex max-h-[min(85dvh,640px)] min-h-[min(70dvh,520px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
+          className="relative z-[110] flex max-h-[min(85dvh,640px)] w-full max-w-[380px] flex-col overflow-hidden rounded-[2rem] border border-line bg-white shadow-[0_24px_90px_rgba(23,20,17,0.16)] sm:max-w-[400px]"
         >
           <div className="min-w-0 flex-1 overflow-y-auto p-5 sm:p-6 md:p-7">{children}</div>
         </motion.div>
