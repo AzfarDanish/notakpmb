@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       getProgrammes().then((ps) => ps.filter((p) => `${p.title} ${p.code} ${p.id}`.toLowerCase().includes(q.toLowerCase())).slice(0, 5)).catch(() => []),
       searchCourses(q, 5).catch(() => []),
       searchArchiveWithCustom(q).catch(() => ({ programmes: [], subjects: [] })),
-      searchFeedbackAdmin(q, 'newest', 'all', 5).catch(() => []),
+      searchFeedbackAdmin(q, 'newest', 5).catch(() => []),
     ]);
     const { getR2Client } = await import('@/lib/r2');
     const client = getR2Client();

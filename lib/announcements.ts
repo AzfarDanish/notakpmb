@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase';
 
-export type AnnouncementStatus = 'draft' | 'published' | 'archived';
+export type AnnouncementStatus = 'draft' | 'published';
 export type AnnouncementBlockType = 'text' | 'image' | 'banner' | 'download' | 'upload_request';
 
 export type AnnouncementBlockData = Record<string, unknown>;
@@ -35,7 +35,6 @@ export type AnnouncementSubmission = {
   uploaderHash: string
   message: string
   fileCount: number
-  status: 'new' | 'reviewed' | 'archived'
   createdAt: string
   files: AnnouncementFile[]
 };
@@ -53,7 +52,7 @@ export type AnnouncementFile = {
   createdAt: string
 };
 
-const STATUS = new Set<AnnouncementStatus>(['draft', 'published', 'archived']);
+const STATUS = new Set<AnnouncementStatus>(['draft', 'published']);
 const BLOCK_TYPES = new Set<AnnouncementBlockType>(['text', 'image', 'banner', 'download', 'upload_request']);
 
 export function normalizeAnnouncementTitle(value: unknown): string {
@@ -199,12 +198,11 @@ export async function createAnnouncement(title: string, createdBy?: string | nul
   return mapAnnouncement(data as Record<string, unknown>);
 }
 
-export async function updateAnnouncement(id: string, input: { title?: unknown; publishAt?: unknown; expiresAt?: unknown; status?: unknown }) {
+export async function updateAnnouncement(id: string, input: { title?: unknown; publishAt?: unknown; expiresAt?: unknown }) {
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (input.title !== undefined) patch.title = normalizeAnnouncementTitle(input.title);
   if (input.publishAt !== undefined) patch.publish_at = normalizeOptionalDate(input.publishAt);
   if (input.expiresAt !== undefined) patch.expires_at = normalizeOptionalDate(input.expiresAt);
-  if (input.status !== undefined) patch.status = normalizeAnnouncementStatus(input.status);
   if (patch.publish_at && patch.expires_at && Date.parse(String(patch.expires_at)) <= Date.parse(String(patch.publish_at))) throw new Error('Expiry must be after publish date');
   const { data, error } = await supabaseAdmin().from('announcements').update(patch).eq('id', id).select('*').maybeSingle();
   if (error) throw error;
@@ -241,6 +239,18 @@ export async function publishAnnouncement(id: string) {
   const { error } = await supabaseAdmin().rpc('publish_announcement', { target_id: id });
   if (error) throw error;
   return getAnnouncement(id);
+}
+
+export async function unpublishAnnouncement(id: string) {
+  const { data, error } = await supabaseAdmin()
+    .from('announcements')
+    .update({ status: 'draft', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Announcement not found');
+  return mapAnnouncement(data as Record<string, unknown>);
 }
 
 export async function addBlock(announcementId: string, type: AnnouncementBlockType, data?: AnnouncementBlockData) {
@@ -303,7 +313,7 @@ export async function getSubmissionGroups(announcementId: string) {
     for (const row of submissions ?? []) {
       const { data: files } = await supabaseAdmin().from('files').select('*').eq('submission_id', row.id).is('deleted_at', null).order('created_at');
       mapped.push({
-        id: String(row.id), announcementId: String(row.announcement_id), blockId: String(row.block_id), uploaderHash: String(row.uploader_hash), message: String(row.message ?? ''), fileCount: Number(row.file_count ?? 0), status: String(row.status ?? 'new') as AnnouncementSubmission['status'], createdAt: String(row.created_at),
+        id: String(row.id), announcementId: String(row.announcement_id), blockId: String(row.block_id), uploaderHash: String(row.uploader_hash), message: String(row.message ?? ''), fileCount: Number(row.file_count ?? 0), createdAt: String(row.created_at),
         files: (files ?? []).map((f) => ({ key: String(f.key), kind: 'submission', announcementId: f.announcement_id ? String(f.announcement_id) : null, blockId: f.block_id ? String(f.block_id) : null, submissionId: f.submission_id ? String(f.submission_id) : null, title: String(f.title ?? ''), originalName: String(f.original_name ?? ''), size: Number(f.size ?? 0), contentType: String(f.content_type ?? ''), createdAt: String(f.created_at ?? '') })),
       });
     }

@@ -1,20 +1,17 @@
 import { cache } from 'react';
 import { dbOr, supabaseAdmin } from '@/lib/supabase';
 
-export type FeedbackStatus = 'new' | 'reviewed' | 'planned' | 'in_progress' | 'completed' | 'declined' | 'archived' | 'open';
 export type FeedbackSort = 'popular' | 'newest';
 
 export type FeedbackItem = {
   id: string
   body: string
-  status: FeedbackStatus
   votesCount: number
   createdAt: string
   updatedAt: string
   hasVoted: boolean
 }
 
-const VALID_STATUSES = new Set<FeedbackStatus>(['new', 'reviewed', 'planned', 'in_progress', 'completed', 'declined', 'archived', 'open']);
 const MAX_BODY_LENGTH = 500;
 const MIN_BODY_LENGTH = 4;
 
@@ -26,36 +23,21 @@ export function normalizeFeedbackBody(value: unknown): string {
   return body;
 }
 
-export function normalizeFeedbackStatus(value: unknown): FeedbackStatus {
-  if (typeof value !== 'string' || !VALID_STATUSES.has(value as FeedbackStatus)) {
-    throw new Error('Invalid status');
-  }
-  return value as FeedbackStatus;
-}
-
 export function normalizeFeedbackSort(value: string | null): FeedbackSort {
   return value === 'newest' ? 'newest' : 'popular';
 }
 
-export function normalizeStatusFilter(value: string | null): FeedbackStatus | 'all' {
-  if (!value || value === 'all') return 'all';
-  if (!VALID_STATUSES.has(value as FeedbackStatus)) return 'all';
-  return value as FeedbackStatus;
-}
-
 type FeedbackRow = {
-  id: string; body: string; status: string; votes_count: number;
+  id: string; body: string; votes_count: number;
   created_at: string; updated_at: string; has_voted?: number | boolean;
 };
 
+const FEEDBACK_COLUMNS = 'id, body, votes_count, created_at, updated_at';
+
 function mapFeedbackRow(row: FeedbackRow): FeedbackItem {
-  const raw = String(row.status ?? 'new');
-  // Legacy alias: 'open' maps to 'new'
-  const status = (raw === 'open' ? 'new' : raw) as FeedbackStatus;
   return {
     id: String(row.id ?? ''),
     body: String(row.body ?? ''),
-    status,
     votesCount: Number(row.votes_count ?? 0),
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
@@ -66,18 +48,14 @@ function mapFeedbackRow(row: FeedbackRow): FeedbackItem {
 export async function searchFeedbackAdmin(
   query: string,
   sort: FeedbackSort = 'newest',
-  status: FeedbackStatus | 'all' = 'all',
   limit = 50,
   offset = 0,
 ): Promise<FeedbackItem[]> {
   const q = query.trim();
   const capped = Math.min(Math.max(limit, 1), 100);
   const safeOffset = Math.max(0, offset);
-  const select = supabaseAdmin().from('feedback_items').select('id, body, status, votes_count, created_at, updated_at');
-  const filtered = status === 'new'
-    ? select.in('status', ['new', 'open'])
-    : status === 'all' ? select : select.eq('status', status);
-  const searched = q ? filtered.or(`body.ilike.%${q}%,id.ilike.%${q}%`) : filtered;
+  const select = supabaseAdmin().from('feedback_items').select(FEEDBACK_COLUMNS);
+  const searched = q ? select.or(`body.ilike.%${q}%,id.ilike.%${q}%`) : select;
   const ordered = sort === 'newest'
     ? searched.order('created_at', { ascending: false }).order('votes_count', { ascending: false })
     : searched.order('votes_count', { ascending: false }).order('created_at', { ascending: false });
@@ -86,13 +64,10 @@ export async function searchFeedbackAdmin(
   return ((data ?? []) as FeedbackRow[]).map((r) => mapFeedbackRow({ ...r, has_voted: 0 }));
 }
 
-export async function countFeedbackAdmin(query: string, status: FeedbackStatus | 'all' = 'all'): Promise<number> {
+export async function countFeedbackAdmin(query: string): Promise<number> {
   const q = query.trim();
   const select = supabaseAdmin().from('feedback_items').select('id', { count: 'exact', head: true });
-  const filtered = status === 'new'
-    ? select.in('status', ['new', 'open'])
-    : status === 'all' ? select : select.eq('status', status);
-  const searched = q ? filtered.or(`body.ilike.%${q}%,id.ilike.%${q}%`) : filtered;
+  const searched = q ? select.or(`body.ilike.%${q}%,id.ilike.%${q}%`) : select;
   const { count, error } = await searched;
   if (error) throw error;
   return count ?? 0;
@@ -109,21 +84,13 @@ export async function getFeedbackCounts(): Promise<{ total: number; votes: numbe
 
 export const listFeedback = cache(async ({
   sort = 'popular',
-  status = 'all',
   voterHash,
 }: {
   sort?: FeedbackSort
-  status?: FeedbackStatus | 'all'
   voterHash?: string
 } = {}): Promise<FeedbackItem[]> => {
   return dbOr(async () => {
-    let builder = supabaseAdmin().from('feedback_items').select('id, body, status, votes_count, created_at, updated_at');
-    // Public board: 'all' excludes archived (admin-only). Explicit status still works.
-    if (status === 'all') {
-      builder = builder.neq('status', 'archived');
-    } else {
-      builder = builder.eq('status', status);
-    }
+    let builder = supabaseAdmin().from('feedback_items').select(FEEDBACK_COLUMNS);
     builder = sort === 'newest'
       ? builder.order('created_at', { ascending: false }).order('votes_count', { ascending: false })
       : builder.order('votes_count', { ascending: false }).order('created_at', { ascending: false });
@@ -149,7 +116,7 @@ export async function createFeedback(body: string): Promise<FeedbackItem> {
   if (error) throw error;
   const { data, error: selErr } = await supabaseAdmin()
     .from('feedback_items')
-    .select('id, body, status, votes_count, created_at, updated_at')
+    .select(FEEDBACK_COLUMNS)
     .eq('id', id)
     .limit(1)
     .maybeSingle();
@@ -184,7 +151,7 @@ export async function voteFeedback(id: string, voterHash: string): Promise<{ ite
 
   const { data: item, error: itemErr } = await sb
     .from('feedback_items')
-    .select('id, body, status, votes_count, created_at, updated_at')
+    .select(FEEDBACK_COLUMNS)
     .eq('id', id)
     .limit(1)
     .maybeSingle();
@@ -197,23 +164,6 @@ export async function voteFeedback(id: string, voterHash: string): Promise<{ ite
     .eq('voter_hash', voterHash)
     .limit(1);
   return { item: mapFeedbackRow({ ...(item as FeedbackRow), has_voted: voted && voted.length > 0 ? 1 : 0 }), inserted };
-}
-
-export async function updateFeedbackStatus(id: string, status: FeedbackStatus): Promise<FeedbackItem> {
-  const { error } = await supabaseAdmin()
-    .from('feedback_items')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id);
-  if (error) throw error;
-  const { data, error: selErr } = await supabaseAdmin()
-    .from('feedback_items')
-    .select('id, body, status, votes_count, created_at, updated_at')
-    .eq('id', id)
-    .limit(1)
-    .maybeSingle();
-  if (selErr) throw selErr;
-  if (!data) throw new Error('Feedback not found');
-  return mapFeedbackRow({ ...(data as FeedbackRow), has_voted: 0 });
 }
 
 export async function deleteFeedback(id: string): Promise<void> {

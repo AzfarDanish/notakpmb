@@ -107,18 +107,3 @@ export async function listPins(entityType: string): Promise<string[]> {
   }
 }
 
-export async function recordStatusChange(feedbackId: string, oldStatus: string, newStatus: string, reason = '') {
-  const id = `sh-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
-  try {
-    const { error } = await supabaseAdmin().from('status_history').insert({
-      id,
-      feedback_id: feedbackId.slice(0, 200),
-      old_status: oldStatus.slice(0, 40),
-      new_status: newStatus.slice(0, 40),
-      reason: reason.slice(0, 500),
-    });
-    if (error) throw error;
-  } catch {
-    // ignore
-  }
-}

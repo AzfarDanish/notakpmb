@@ -89,7 +89,7 @@ export function DashboardClient() {
             {data.recentFeedback.map((f) => (
               <div key={f.id} className="min-w-0 py-3">
                 <p className="truncate text-sm font-semibold text-ink">{f.body}</p>
-                <p className="mt-1 font-mono text-xs text-muted">{f.status} · {f.votesCount} votes</p>
+                <p className="mt-1 font-mono text-xs text-muted">{f.votesCount} votes</p>
               </div>
             ))}
           </div>

@@ -39,9 +39,9 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json() as { id?: unknown; title?: unknown; publishAt?: unknown; expiresAt?: unknown; status?: unknown };
     if (typeof body.id !== 'string' || !body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
-    if (body.status === 'published') return NextResponse.json({ error: 'Use the publish endpoint' }, { status: 400 });
-    const item = await updateAnnouncement(body.id, body);
-    await logActivity(item.status === 'archived' ? 'announcement.archived' : 'announcement.updated', 'announcement', item.id, item.title);
+    if (body.status !== undefined) return NextResponse.json({ error: 'Use the publish endpoint to change visibility' }, { status: 400 });
+    const item = await updateAnnouncement(body.id, { title: body.title, publishAt: body.publishAt, expiresAt: body.expiresAt });
+    await logActivity('announcement.updated', 'announcement', item.id, item.title);
     revalidateTag('announcements', 'max');
     return NextResponse.json({ item });
   } catch (e) {

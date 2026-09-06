@@ -2,39 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
-import { ArrowLeft, ArrowUp, CheckCircle2, Clock3, Loader2, MessageSquarePlus, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowUp, CheckCircle2, Clock3, Loader2, MessageSquarePlus } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { SearchResultsSkeleton } from '@/components/Skeleton';
-import type { FeedbackItem, FeedbackSort, FeedbackStatus } from '@/lib/feedback';
-
-type StatusFilter = FeedbackStatus | 'all';
-
-const STATUS_LABELS: Record<FeedbackStatus, string> = {
-  new: 'New',
-  open: 'New',
-  reviewed: 'Reviewed',
-  planned: 'Planned',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  declined: 'Declined',
-  archived: 'Archived',
-};
-
-const STATUS_STYLES: Record<FeedbackStatus, string> = {
-  new: 'bg-white text-muted border-line',
-  open: 'bg-white text-muted border-line',
-  reviewed: 'bg-violet-50 text-violet-700 border-violet-100',
-  planned: 'bg-blue-50 text-blue-700 border-blue-100',
-  in_progress: 'bg-amber-50 text-amber-700 border-amber-100',
-  completed: 'bg-green-50 text-green-700 border-green-100',
-  declined: 'bg-neutral-100 text-neutral-600 border-neutral-200',
-  archived: 'bg-neutral-100 text-neutral-500 border-neutral-200',
-};
+import type { FeedbackItem, FeedbackSort } from '@/lib/feedback';
 
 export function FeedbackBoard() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [sort, setSort] = useState<FeedbackSort>('popular');
-  const [status, setStatus] = useState<StatusFilter>('all');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,7 +21,6 @@ export function FeedbackBoard() {
     setLoading(true);
     setError('');
     const params = new URLSearchParams({ sort });
-    if (status !== 'all') params.set('status', status);
 
     fetch(`/api/feedback?${params.toString()}`, { signal: controller.signal })
       .then(async (res) => {
@@ -66,7 +40,7 @@ export function FeedbackBoard() {
       });
 
     return () => controller.abort();
-  }, [sort, status]);
+  }, [sort]);
 
   async function submitFeedback(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -179,17 +153,6 @@ export function FeedbackBoard() {
               <option value="popular">Popular</option>
               <option value="newest">Newest</option>
             </select>
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as StatusFilter)}
-              className="min-h-11 rounded-2xl border border-line bg-white px-4 py-2 text-sm font-semibold text-ink outline-none focus:border-ink"
-              aria-label="Filter feedback status"
-            >
-              <option value="all">All status</option>
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -222,14 +185,13 @@ export function FeedbackBoard() {
                   <span className="mt-1 tabular-nums">{item.votesCount}</span>
                 </button>
                 <div className="min-w-0">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <StatusBadge status={item.status} />
-                    {item.hasVoted && (
+                  {item.hasVoted && (
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 rounded-full bg-sheet px-2.5 py-1 text-xs font-semibold text-muted">
                         <CheckCircle2 size={13} strokeWidth={1.8} /> Voted
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   <p className="text-dynamic text-lg font-black leading-tight tracking-tight text-ink md:text-xl">
                     {item.body}
                   </p>
@@ -244,16 +206,6 @@ export function FeedbackBoard() {
         )}
       </section>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: FeedbackStatus }) {
-  const official = status !== 'open';
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${STATUS_STYLES[status]}`}>
-      {official && <Sparkles size={13} strokeWidth={1.8} aria-hidden="true" />}
-      {STATUS_LABELS[status]}
-    </span>
   );
 }
 
