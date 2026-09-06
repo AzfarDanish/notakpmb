@@ -9,8 +9,8 @@ export function AnnouncementRenderer({ announcement, preview = false }: { announ
   return (
     <section className="min-w-0" aria-label={`Announcement: ${announcement.title}`}>
       <p className="text-sm font-bold text-accent">Announcement</p>
-      <h2 className="text-dynamic mt-2 text-3xl font-black leading-[0.98] tracking-[-0.04em] text-balance sm:text-4xl">{announcement.title}</h2>
-      <div className="mt-5 flex min-w-0 flex-col gap-5">
+      <h2 className="text-dynamic mt-2 text-3xl font-black leading-[1.05] tracking-[-0.04em] text-balance sm:text-4xl">{announcement.title}</h2>
+      <div className="mt-6 flex min-w-0 flex-col gap-6">
         {announcement.blocks.map((block) => {
           const d = block.data;
           if (block.type === 'text') return <div key={block.id} className="text-dynamic whitespace-pre-wrap text-base leading-7 text-ink">{String(d.text ?? '')}</div>;
@@ -44,7 +44,7 @@ function UploadRequestForm({ blockId, data, preview }: { blockId: string; data: 
   const requestToken = useRef(crypto.randomUUID());
   const accepted = Array.isArray(data.acceptedTypes) ? data.acceptedTypes.map(String) : ['pdf'];
   async function submit(e: React.FormEvent) {e.preventDefault();if(preview||busy||success)return;setBusy(true);setError('');try{const form=new FormData();form.append('blockId',blockId);form.append('requestToken',requestToken.current);form.append('message',message);files.forEach((f)=>form.append('files',f));const res=await fetch('/api/announcements/submit',{method:'POST',body:form});const body=await res.json().catch(()=>null) as {error?:string}|null;if(!res.ok)throw new Error(body?.error||'Submission failed');setSuccess(true);setFiles([]);setMessage('');requestToken.current=crypto.randomUUID();}catch(e){setError(e instanceof Error?e.message:'Submission failed')}finally{setBusy(false)}}
-  return <form onSubmit={submit} className="min-w-0 border-t border-line pt-5">
+  return <form onSubmit={submit} className="min-w-0 border-t border-line pt-6">
     <div className="flex items-start gap-3"><Upload size={18} className="mt-1 shrink-0 text-accent"/><div className="min-w-0"><h3 className="text-dynamic text-lg font-black text-ink">{String(data.title??'Upload files')}</h3><p className="text-dynamic mt-1 text-sm leading-6 text-muted">{String(data.instructions??'')}</p><p className="mt-2 text-xs font-medium text-muted">{accepted.map((x)=>x.toUpperCase()).join(', ')} · max {Number(data.maxSizeMB??5)}MB each · {data.multiple===true?'multiple files':'one file'}{data.required===true?' · required':''}</p></div></div>
     <input type="file" multiple={data.multiple===true} accept={accepted.map((x)=>`.${x}`).join(',')} onChange={(e)=>{setSuccess(false);setFiles(Array.from(e.target.files??[]));setError('')}} disabled={busy||success||preview} className="mt-4 block w-full min-w-0 rounded-2xl border border-dashed border-line bg-white px-3 py-3 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-paper"/>
     {data.allowMessage!==false?<textarea value={message} onChange={(e)=>setMessage(e.target.value.slice(0,1000))} disabled={busy||success||preview} rows={3} placeholder="Optional message" className="mt-3 w-full resize-none rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-ink"/>:null}
