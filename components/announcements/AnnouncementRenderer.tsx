@@ -1,16 +1,16 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Check, Download, Loader2, Upload } from 'lucide-react';
+import { Check, Download, Loader2, Megaphone, Upload } from 'lucide-react';
 import Image from 'next/image';
 import type { Announcement } from '@/lib/announcements';
 
 export function AnnouncementRenderer({ announcement, preview = false }: { announcement: Announcement; preview?: boolean }) {
   return (
     <section className="min-w-0" aria-label={`Announcement: ${announcement.title}`}>
-      <p className="text-sm font-bold text-accent">Announcement</p>
-      <h2 className="text-dynamic mt-2 text-3xl font-black leading-[1.05] tracking-[-0.04em] text-balance sm:text-4xl">{announcement.title}</h2>
-      <div className="mt-6 flex min-w-0 flex-col gap-6">
+      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-accent"><Megaphone size={13} strokeWidth={2.2} aria-hidden="true" />Announcement</p>
+      <h2 className="text-dynamic mt-3 text-balance text-4xl font-black leading-[1.02] tracking-[-0.03em] text-ink sm:text-5xl">{announcement.title}</h2>
+      {announcement.blocks.length > 0 ? <div className="mt-7 flex min-w-0 flex-col gap-6 border-l-2 border-accent pl-4 sm:pl-5">
         {announcement.blocks.map((block) => {
           const d = block.data;
           if (block.type === 'text') return <div key={block.id} className="text-dynamic whitespace-pre-wrap text-base leading-7 text-ink">{String(d.text ?? '')}</div>;
@@ -34,7 +34,7 @@ export function AnnouncementRenderer({ announcement, preview = false }: { announ
           }
           return <UploadRequestForm key={block.id} blockId={block.id} data={d} preview={preview} />;
         })}
-      </div>
+      </div> : null}
     </section>
   );
 }
